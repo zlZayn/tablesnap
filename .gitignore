@@ -1,8 +1,20 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.env
+*.log
+
+# Virtual environment
 .venv/
+
+# Project output / build
 outputs/
 build/
 dist/
 *.spec
 stdout.txt
+
+# Internal task tracking
+.superpowers/

@@ -1,10 +1,9 @@
-"""Screen capture — low-level mss wrapper.
+"""Screen capture — low-level :mod:`mss` wrapper.
 
-Provides:
-    capture_screen() -> Image.Image
-        Full-screen capture of the primary monitor.
-    save_temp(image) -> str
-        Persist a PIL Image to a unique temp file and return its path.
+Provides::
+
+    capture_screen() -> Image.Image       # full-screen capture
+    save_temp(image) -> str               # persist to a temp PNG file
 """
 
 import tempfile

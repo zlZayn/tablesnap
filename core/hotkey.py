@@ -12,15 +12,13 @@ import time
 
 import keyboard
 
-_POLL_INTERVAL = 0.05  # seconds between key-state checks
 
-
-def wait_for_hotkey(hotkey: str, poll_interval: float = _POLL_INTERVAL) -> None:
+def wait_for_hotkey(hotkey: str, poll_interval: float = 0.05) -> None:
     """Block the current thread until *hotkey* is pressed.
 
     Args:
-        hotkey: Key combination understood by ``keyboard.is_pressed``,
-            e.g. ``"ctrl+alt+s"``.
+        hotkey:       Key combination understood by ``keyboard.is_pressed``,
+                      e.g. ``"ctrl+alt+s"``.
         poll_interval: Seconds between key-state polls (default 50 ms).
     """
     while True:

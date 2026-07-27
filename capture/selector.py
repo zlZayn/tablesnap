@@ -1,28 +1,21 @@
-"""Region-selection overlay — lets the user drag a rectangle on a dimmed
-full-screen preview and returns the cropped image.
+"""Region-selection overlay.
 
-Usage:
-    path = capture_region()      # str | None  (None means cancelled)
+Shows a dimmed full-screen preview and lets the user drag a rectangle to
+select the region of interest.
+
+Usage::
+
+    from capture.selector import capture_region
+    path = capture_region()          # str | None  (None == cancelled)
 """
 
 import tkinter as tk
 
 from PIL import Image, ImageTk
 
-from screenshot import capture_screen, save_temp
+from capture.screen import capture_screen, save_temp
+from core.config import COLOR, DASH, DIM_ALPHA, LINE_W, MIN_SIZE
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-_DIM_ALPHA = 0.3          # how much to darken the preview
-_MIN_SIZE  = 10            # minimum selection width/height (px)
-_DASH      = (4, 2)        # selection-rectangle dash pattern
-_COLOR     = "#FF4444"     # selection-rectangle colour
-_LINE_W    = 2             # selection-rectangle line width
-
-# ---------------------------------------------------------------------------
-# Overlay widget
-# ---------------------------------------------------------------------------
 
 class RegionSelector:
     """Full-screen, dimmed overlay that captures a mouse-drag rectangle.
@@ -51,7 +44,7 @@ class RegionSelector:
         dimmed = Image.blend(
             background,
             Image.new("RGB", background.size, (0, 0, 0)),
-            _DIM_ALPHA,
+            DIM_ALPHA,
         )
         self._photo = ImageTk.PhotoImage(dimmed)
 
@@ -70,7 +63,7 @@ class RegionSelector:
 
     def show(self) -> tuple[int, int, int, int] | None:
         self._root.mainloop()
-        self._root.destroy()  # hide the overlay so the screen returns to normal
+        self._root.destroy()
         return self._result
 
     # -- event handlers ---------------------------------------------------
@@ -85,17 +78,16 @@ class RegionSelector:
             self._canvas.delete(self._rect_id)
         self._rect_id = self._canvas.create_rectangle(
             self._sx, self._sy, event.x, event.y,
-            outline=_COLOR, width=_LINE_W, dash=_DASH,
+            outline=COLOR, width=LINE_W, dash=DASH,
         )
 
     def _on_release(self, event: tk.Event) -> None:
         x0, y0 = self._sx, self._sy
         x1, y1 = event.x, event.y
-
         left, top = min(x0, x1), min(y0, y1)
         right, bottom = max(x0, x1), max(y0, y1)
 
-        if (right - left) < _MIN_SIZE or (bottom - top) < _MIN_SIZE:
+        if (right - left) < MIN_SIZE or (bottom - top) < MIN_SIZE:
             self._result = None
         else:
             self._result = (left, top, right, bottom)
@@ -106,19 +98,15 @@ class RegionSelector:
         self._root.quit()
 
 
-# ---------------------------------------------------------------------------
-# Public convenience function
-# ---------------------------------------------------------------------------
-
 def capture_region() -> str | None:
-    """Full-screen snapshot → user selects region → return cropped path.
+    """Full-screen snapshot -> user selects region -> return cropped path.
 
     1. Captures the entire primary monitor.
     2. Shows a dimmed overlay where the user drags a rectangle.
     3. Crops to that rectangle and saves to a temp PNG file.
 
     Returns:
-        Absolute path to the cropped image, or *None* if the user cancelled.
+        Absolute path to the cropped image, or ``None`` if cancelled.
     """
     full = capture_screen()
     selector = RegionSelector(full)
