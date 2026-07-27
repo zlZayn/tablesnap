@@ -10,4 +10,5 @@ dependencies = [
     "mss>=6.0.0",
     "keyboard>=0.13.0",
     "numpy>=1.21.0",
+    "rich>=14.3.4",
 ]
