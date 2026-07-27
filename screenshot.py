@@ -1,4 +1,11 @@
-"""屏幕截图功能"""
+"""Screen capture — low-level mss wrapper.
+
+Provides:
+    capture_screen() -> Image.Image
+        Full-screen capture of the primary monitor.
+    save_temp(image) -> str
+        Persist a PIL Image to a unique temp file and return its path.
+"""
 
 import tempfile
 from datetime import datetime
@@ -8,29 +15,26 @@ from mss import mss
 from PIL import Image
 
 
-def capture_screen() -> str:
-    """截取全屏并保存到临时文件.
+def capture_screen() -> Image.Image:
+    """Capture the full primary monitor.
 
     Returns:
-        临时图片文件路径.
-
-    Raises:
-        RuntimeError: 截图或保存失败时抛出.
+        PIL RGB Image of the entire screen.
     """
-    try:
-        with mss() as sct:
-            monitor = sct.monitors[1]
-            screenshot = sct.grab(monitor)
+    with mss() as sct:
+        mon = sct.monitors[1]
+        raw = sct.grab(mon)
+        return Image.frombytes("RGB", raw.size, raw.bgra, "raw", "BGRX")
 
-            temp_dir = tempfile.gettempdir()
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            temp_path = Path(temp_dir) / f"screenshot_{timestamp}.png"
 
-            img = Image.frombytes(
-                "RGB", screenshot.size, screenshot.bgra, "raw", "BGRX"
-            )
-            img.save(str(temp_path))
+def save_temp(image: Image.Image) -> str:
+    """Write *image* to a timestamped temporary PNG file.
 
-            return str(temp_path)
-    except Exception as e:
-        raise RuntimeError(f"截图失败: {e}") from e
+    Returns:
+        Absolute path of the saved file.
+    """
+    tmp = Path(tempfile.gettempdir())
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = tmp / f"screenshot_{ts}.png"
+    image.save(path)
+    return str(path)

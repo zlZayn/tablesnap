@@ -10,13 +10,13 @@ def export_to_excel(data: list[list[str]], output_dir: str | None = None) -> str
     """Export a 2D grid of text data to an Excel file.
 
     Creates a timestamped .xlsx file under the given output directory
-    (defaults to ~/Desktop/stock_screenshots/).  Column widths are
+    (defaults to ``<project_root>/outputs/``).  Column widths are
     auto-fitted with a 50-character cap.
 
     Args:
         data: 2D list where ``data[row][col]`` is the cell text.
         output_dir: Output directory.  If ``None``, uses
-            ``~/Desktop/stock_screenshots/``.
+            ``<project_root>/outputs/``.
 
     Returns:
         Absolute path to the generated Excel file.
@@ -30,7 +30,7 @@ def export_to_excel(data: list[list[str]], output_dir: str | None = None) -> str
         raise ValueError("data must not be empty")
 
     if output_dir is None:
-        output_dir = str(Path.home() / "Desktop" / "stock_screenshots")
+        output_dir = str(Path(__file__).resolve().parent / "outputs")
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
