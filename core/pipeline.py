@@ -33,14 +33,17 @@ def process_screenshot() -> None:
 
 def main_loop() -> None:
     """Print banner and enter the hotkey-polling loop."""
-    print("=" * 40)
-    print("      截图 OCR 转 Excel 工具")
-    print("=" * 40)
-    print(f"  快捷键：{HOTKEY}")
-    print("  操作：拖拽选择要识别的屏幕区域")
-    print("  保存：项目目录/outputs/")
-    print("  退出：Ctrl+C")
-    print("=" * 40)
+    line = "\u2500" * 36
+    print(line)
+    print("    截图 OCR  转  Excel  工具")
+    print(line)
+    print()
+    print(f"  {'快捷键':>6}  {HOTKEY}")
+    print(f"  {'操作':>6}  拖拽选择屏幕区域")
+    print(f"  {'保存':>6}  outputs/")
+    print(f"  {'退出':>6}  Ctrl+C")
+    print()
+    print(line)
 
     try:
         while True:
