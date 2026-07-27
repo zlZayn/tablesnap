@@ -2,7 +2,7 @@
 
 import time
 
-from core.config import DEBOUNCE, HOTKEY
+from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR
 from core.hotkey import wait_for_hotkey
 from ocr.engine import recognize_text
 from output.excel import export_to_excel
@@ -38,9 +38,9 @@ def main_loop() -> None:
     print("    截图 OCR  转  Excel  工具")
     print(line)
     print()
-    print(f"  {'快捷键':>6}  {HOTKEY}")
+    print(f"  {'快捷键':>6}  {HOTKEY.title()}")
     print(f"  {'操作':>6}  拖拽选择屏幕区域")
-    print(f"  {'保存':>6}  outputs/")
+    print(f"  {'保存':>6}  {OUTPUT_DIR.resolve()}")
     print(f"  {'退出':>6}  Ctrl+C")
     print()
     print(line)
