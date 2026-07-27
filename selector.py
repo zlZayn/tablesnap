@@ -70,6 +70,7 @@ class RegionSelector:
 
     def show(self) -> tuple[int, int, int, int] | None:
         self._root.mainloop()
+        self._root.destroy()  # hide the overlay so the screen returns to normal
         return self._result
 
     # -- event handlers ---------------------------------------------------
