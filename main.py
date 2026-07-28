@@ -1,4 +1,4 @@
-"""Screenshot OCR to Excel — entry point.
+"""Screenshot to Excel — entry point.
 
 Launches the hotkey-polling loop.  All orchestration logic lives in
 :mod:`core.pipeline`.

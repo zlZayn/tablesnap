@@ -32,6 +32,8 @@ class RegionSelector:
         self._bg = background
         self._result: tuple[int, int, int, int] | None = None
         self._rect_id: int | None = None
+        self._hl_id: int | None = None        # "highlight" image item
+        self._hl_photo: ImageTk.PhotoImage | None = None
         self._sx: int | None = None
         self._sy: int | None = None
 
@@ -40,19 +42,19 @@ class RegionSelector:
         self._root.attributes("-topmost", True)
         self._root.configure(cursor="crosshair")
 
-        # Dimmed preview
+        # Dimmed full-screen preview (always the base layer)
         dimmed = Image.blend(
             background,
             Image.new("RGB", background.size, (0, 0, 0)),
             DIM_ALPHA,
         )
-        self._photo = ImageTk.PhotoImage(dimmed)
+        self._photo_dimmed = ImageTk.PhotoImage(dimmed)
 
         self._canvas = tk.Canvas(
             self._root, highlightthickness=0, cursor="crosshair"
         )
         self._canvas.pack(fill=tk.BOTH, expand=True)
-        self._canvas.create_image(0, 0, anchor=tk.NW, image=self._photo)
+        self._canvas.create_image(0, 0, anchor=tk.NW, image=self._photo_dimmed)
 
         self._canvas.bind("<ButtonPress-1>", self._on_press)
         self._canvas.bind("<B1-Motion>", self._on_drag)
@@ -74,6 +76,8 @@ class RegionSelector:
             self._canvas.delete(self._rect_id)
 
     def _on_drag(self, event: tk.Event) -> None:
+        assert self._sx is not None and self._sy is not None
+        # -- Draw the dashed outline --
         if self._rect_id is not None:
             self._canvas.delete(self._rect_id)
         self._rect_id = self._canvas.create_rectangle(
@@ -81,7 +85,23 @@ class RegionSelector:
             outline=COLOR, width=LINE_W, dash=DASH,
         )
 
+        # -- Overlay the ORIGINAL (non-dimmed) pixels on the selection --
+        x0, y0 = self._sx, self._sy
+        x1, y1 = event.x, event.y
+        left, top = min(x0, x1), min(y0, y1)
+        right, bottom = max(x0, x1), max(y0, y1)
+
+        region = self._bg.crop((left, top, right, bottom))
+        self._hl_photo = ImageTk.PhotoImage(region)
+
+        if self._hl_id is not None:
+            self._canvas.delete(self._hl_id)
+        self._hl_id = self._canvas.create_image(
+            left, top, anchor=tk.NW, image=self._hl_photo,
+        )
+
     def _on_release(self, event: tk.Event) -> None:
+        assert self._sx is not None and self._sy is not None
         x0, y0 = self._sx, self._sy
         x1, y1 = event.x, event.y
         left, top = min(x0, x1), min(y0, y1)

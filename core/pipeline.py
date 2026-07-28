@@ -1,43 +1,104 @@
-"""Workflow orchestration — ties capture, OCR, and export together."""
+"""Workflow orchestration — ties capture, VLM analysis, and export together."""
 
 import time
+from datetime import datetime
+from pathlib import Path
 
+from openpyxl import load_workbook
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR
+from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR, VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
 from core.hotkey import wait_for_hotkey
-from ocr.engine import recognize_text
-from output.excel import export_to_excel
+from vlm.client import OllamaClient
+from export.excel import csv_to_excel
 from capture.selector import capture_region
 
 console = Console()
 
 
-def process_screenshot() -> None:
-    """Select a screen region -> OCR -> export Excel."""
+def _log_stage(label: str, elapsed: float, detail: str = "") -> None:
+    """Timing line."""
+    padded = f"{label:<20s}"
+    rest = f"{elapsed:>6.2f}s"
+    if detail:
+        rest += f"  {detail}"
+    print(f"  {padded}{rest}")
+
+
+def _excel_shape(path: str) -> str:
+    """Read xlsx shape quickly — '3r x 5c' or '?'."""
     try:
-        console.print("[bold]请用鼠标拖拽选择要识别的区域（按 Esc 取消）[/bold]")
+        wb = load_workbook(path)
+        ws = wb.active
+        if ws is not None:
+            return f"{ws.max_row}r x {ws.max_column}c"
+    except Exception:
+        pass
+    return "?"
+
+
+def process_screenshot() -> None:
+    """1. Capture region → 2. VLM analyze → 3. Export to Excel."""
+    try:
+        # -- Step 1: Capture --
+        print(f"  [{'capture'.center(18)}]")
+        t_cap = time.perf_counter()
         image_path = capture_region()
+        t_cap = time.perf_counter() - t_cap
 
         if image_path is None:
-            console.print("[yellow]已取消[/yellow]")
+            _log_stage("capture", t_cap, "cancelled")
             return
 
-        with console.status("[cyan]正在识别文字..."):
-            lines = recognize_text(image_path)
-        if lines:
-            console.print(f"[green]识别到 {len(lines)} 行[/green]")
-        else:
-            console.print("[yellow]未识别到文字[/yellow]")
+        _log_stage("capture", t_cap)
 
-        console.print("[cyan]正在导出 Excel...[/cyan]")
-        excel_path = export_to_excel(lines)
-        console.print(f"[green]Excel 已保存到:[/green] {excel_path}")
-        console.print("[bold green]完成！[/bold green]")
+        # -- Step 2: VLM analysis --
+        t_vlm = time.perf_counter()
+        image_bytes = Path(image_path).read_bytes()
+        client = OllamaClient(
+            base_url=VLM_OLLAMA_URL,
+            model=VLM_MODEL,
+            timeout=VLM_TIMEOUT,
+        )
+        csv_text = client.analyze(image_bytes)
+        t_vlm = time.perf_counter() - t_vlm
+
+        raw_stripped = csv_text.strip()
+
+        # -- Step 3: Export --
+        t_xport = time.perf_counter()
+        if raw_stripped.startswith("ERROR:") or raw_stripped == "NO_TABLE":
+            excel_path = None
+        else:
+            excel_path = csv_to_excel(csv_text)
+        t_xport = time.perf_counter() - t_xport
+
+        # -- Summary --
+        total = t_cap + t_vlm + t_xport
+        _log_stage("vlm analyze", t_vlm)
+        _log_stage("export", t_xport)
+        print(f"  {'─' * 40}")
+        _log_stage("total", total)
+
+        if excel_path:
+            shape = _excel_shape(excel_path)
+            extras = []
+            if "```" in csv_text:
+                extras.append("fenced")
+            hint = f"  ({shape})" + (f"  [{', '.join(extras)}]" if extras else "")
+            console.print(f"\n  [green]  {excel_path}  {hint}[/green]")
+        elif raw_stripped == "NO_TABLE":
+            console.print("\n  [yellow]no table detected in the selected region[/yellow]")
+            console.print("       [dim]→ Make sure the area has a table with column headers[/dim]")
+        elif raw_stripped.startswith("ERROR:"):
+            console.print(f"\n  [red]{raw_stripped}[/red]")
+    except ValueError as exc:
+        console.print(f"\n  [yellow]VLM returned no recognizable table data[/yellow]")
+        console.print(f"       [dim]→ Select a region that contains a table with column headers[/dim]")
     except Exception as exc:
-        console.print(f"[red]处理失败:[/red] {exc}")
+        console.print(f"\n  [red]error:[/red] {exc}")
 
 
 def main_loop() -> None:
@@ -52,7 +113,7 @@ def main_loop() -> None:
 
     panel = Panel(
         grid,
-        title="截图 OCR → Excel",
+        title="截图 \u2192 Excel",
         border_style="cyan",
         padding=(1, 2),
     )
@@ -63,5 +124,6 @@ def main_loop() -> None:
             wait_for_hotkey(HOTKEY)
             time.sleep(DEBOUNCE)
             process_screenshot()
+            console.rule(style="bright_black")
     except KeyboardInterrupt:
         console.print("\n[green]已退出[/green]")

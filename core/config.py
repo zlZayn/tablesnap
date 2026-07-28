@@ -1,6 +1,6 @@
-"""Centralised configuration for the screenshot-ocr pipeline.
+"""Centralised configuration for the screenshot-to-excel pipeline.
 
-All tunable constants live here so that tweaking OCR behaviour,
+All tunable constants live here so that tweaking VLM parameters,
 preprocessing parameters, or output paths never requires hunting
 through multiple files.
 """
@@ -11,7 +11,7 @@ from pathlib import Path
 # Project paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR   = PROJECT_ROOT / "outputs"
+OUTPUT_DIR   = PROJECT_ROOT / "results"
 
 # ---------------------------------------------------------------------------
 # Hotkey
@@ -30,23 +30,11 @@ COLOR      = "#FF4444"     # selection-rectangle colour
 LINE_W     = 2             # selection-rectangle line width
 
 # ---------------------------------------------------------------------------
-# Image preprocessing
-# ---------------------------------------------------------------------------
-UPSCALE_FACTOR = 3.0       # enlarge image before OCR (helps small text)
-CLAHE_CLIP     = 2.0       # contrast limit for CLAHE
-CLAHE_TILE     = (8, 8)    # tile grid size for CLAHE
-SHARPEN_AMOUNT = 1.5       # sharpening kernel centre weight
-
-# ---------------------------------------------------------------------------
-# OCR engine
-# ---------------------------------------------------------------------------
-OCR_CONFIDENCE_THRESHOLD = 0.0   # minimum confidence (0 = keep all)
-
-# ---------------------------------------------------------------------------
-# Column detection
-# ---------------------------------------------------------------------------
-ROW_GAP_MULTIPLIER = 2.5        # adaptive row-threshold multiplier
-ROW_GAP_MIN       = 15          # minimum row gap (px)
-COLUMN_GAP_MIN    = 20          # minimum x-gap to be a column boundary
+# VLM (Vision Language Model)
+VLM_MODEL      = "qwen3-vl:4b-instruct"            # Ollama model id
+VLM_OLLAMA_URL = "http://localhost:11434"           # Ollama server base URL
+VLM_TIMEOUT    = 30                                 # seconds per request
+VLM_TEMPERATURE   = 0.1                             # generation temperature
+VLM_NUM_PREDICT   = 2048                            # max output tokens
 
 

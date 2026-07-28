@@ -10,7 +10,7 @@ __pycache__/
 .venv/
 
 # Project output / build
-outputs/
+results/
 build/
 dist/
 *.spec
@@ -18,3 +18,10 @@ stdout.txt
 
 # Internal task tracking
 .superpowers/
+.omo/
+
+# Pytest cache
+.pytest_cache/
+
+# Test output (regenerated each run)
+tests/test_output/
