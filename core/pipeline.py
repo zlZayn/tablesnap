@@ -3,30 +3,33 @@
 import subprocess
 import time
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
 from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR, VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
 from core.hotkey import wait_for_hotkey
+from core.output import (
+    console,
+    print_banner,
+    print_break,
+    print_check,
+    print_err,
+    print_ok,
+    print_rule,
+    print_stage,
+    print_timing,
+    print_tip,
+    print_warn,
+)
 from vlm.client import OllamaClient
 from export.xlsx import psv_to_xlsx
 from capture.selector import capture_region
 
-console = Console()
-
 
 def _log_stage(label: str, elapsed: float, detail: str = "") -> None:
-    """Timing line."""
-    padded = f"{label:<20s}"
-    rest = f"{elapsed:>6.2f}s"
-    if detail:
-        rest += f"  {detail}"
-    print(f"  {padded}{rest}")
+    """Timing line (delegates to output module)."""
+    print_timing(label, elapsed, detail)
 
 
 def _xlsx_shape(path: str) -> str:
@@ -50,14 +53,14 @@ def process_screenshot() -> None:
     """1. Capture region → 2. VLM analyze → 3. Export to XLSX."""
     try:
         # -- Step 1: Capture --
-        print(f"  [{'capture'.center(18)}]")
+        print_stage("capture")
         t_cap = time.perf_counter()
         try:
             image_path = capture_region()
         except Exception as exc:
             _log_stage("capture", time.perf_counter() - t_cap)
-            console.print(f"  [red]capture failed:[/red] {exc}")
-            console.print("       [dim]→ Check display / permissions, then try again[/dim]")
+            print_err(f"capture failed: {exc}")
+            print_tip("Check display / permissions, then try again")
             return
         t_cap = time.perf_counter() - t_cap
 
@@ -68,6 +71,7 @@ def process_screenshot() -> None:
         _log_stage("capture", t_cap)
 
         # -- Step 2: VLM analysis --
+        print_stage("vlm")
         t_vlm = time.perf_counter()
         image_bytes = Path(image_path).read_bytes()
         client = OllamaClient(
@@ -77,22 +81,23 @@ def process_screenshot() -> None:
         )
         psv_text = client.analyze(image_bytes)
         t_vlm = time.perf_counter() - t_vlm
+        _log_stage("vlm analyze", t_vlm)
 
         raw_stripped = psv_text.strip()
 
         # -- Step 3: Export --
+        print_stage("export")
         t_xport = time.perf_counter()
         if raw_stripped.startswith("ERROR:") or raw_stripped == "NO_TABLE":
             xlsx_path = None
         else:
             xlsx_path = psv_to_xlsx(psv_text)
         t_xport = time.perf_counter() - t_xport
+        _log_stage("export", t_xport)
 
         # -- Summary --
         total = t_cap + t_vlm + t_xport
-        _log_stage("vlm analyze", t_vlm)
-        _log_stage("export", t_xport)
-        print(f"  {'─' * 40}")
+        print_break()
         _log_stage("total", total)
 
         if xlsx_path:
@@ -102,18 +107,18 @@ def process_screenshot() -> None:
                 extras.append("fenced")
             hint = f"  ({shape})" + (f"  [{', '.join(extras)}]" if extras else "")
             href = _file_href(xlsx_path)
-            console.print(f"\n  [green]  {href}  {hint}[/green]")
+            print_ok(f"{href}  {hint}")
         elif raw_stripped == "NO_TABLE":
-            console.print("\n  [yellow]no table detected in the selected region[/yellow]")
-            console.print("       [dim]→ Make sure the area has a table with column headers[/dim]")
+            print_warn("no table detected in the selected region")
+            print_tip("Make sure the area has a table with column headers")
         elif raw_stripped.startswith("ERROR:"):
-            console.print(f"\n  [red]{raw_stripped}[/red]")
+            print_err(raw_stripped)
     except ValueError:
-        console.print("\n  [yellow]VLM returned unparseable output[/yellow]")
-        console.print("       [dim]→ Try again, or check Ollama model status[/dim]")
+        print_warn("VLM returned unparseable output")
+        print_tip("Try again, or check Ollama model status")
     except Exception as exc:
-        console.print(f"\n  [red]unexpected error:[/red] {exc}")
-        console.print("       [dim]→ If this persists, check the logs[/dim]")
+        print_err(f"unexpected error: {exc}")
+        print_tip("If this persists, check the logs")
 
 
 def _ensure_ollama(url: str, wait: int = 4) -> bool:
@@ -154,32 +159,20 @@ def _ensure_ollama(url: str, wait: int = 4) -> bool:
 
 def main_loop() -> None:
     """Print banner and enter the hotkey-polling loop."""
-    grid = Table.grid(padding=(0, 2))
-    grid.add_column(width=8, justify="right", style="bold cyan")
-    grid.add_column()
-    grid.add_row("快捷键", HOTKEY.title())
-    grid.add_row("操作", "拖拽选择屏幕区域")
-    grid.add_row("保存", str(OUTPUT_DIR.resolve()))
-    grid.add_row("退出", "Ctrl+C")
+    # Check Ollama before showing the banner so the hotkey is ready immediately.
+    print_check("检查 Ollama……")
+    if not _ensure_ollama(VLM_OLLAMA_URL):
+        print_warn(f"Ollama not detected at {VLM_OLLAMA_URL}")
+        print_tip("Auto-launch failed. Start manually:  ollama serve")
+        console.print()
 
-    panel = Panel(
-        grid,
-        title="截图 \u2192 XLSX",
-        border_style="cyan",
-        padding=(1, 2),
-    )
-    console.print(panel)
+    print_banner(HOTKEY.title(), str(OUTPUT_DIR.resolve()))
 
     try:
-        if not _ensure_ollama(VLM_OLLAMA_URL):
-            console.print("  [yellow]Ollama not detected at " + VLM_OLLAMA_URL + "[/yellow]")
-            console.print("       [dim]→ Auto-launch failed. Start manually:  ollama serve[/dim]")
-            console.print()
-
         while True:
             wait_for_hotkey(HOTKEY)
             time.sleep(DEBOUNCE)
             process_screenshot()
-            console.rule(style="bright_black")
+            print_rule()
     except KeyboardInterrupt:
         console.print("\n[green]已退出[/green]")

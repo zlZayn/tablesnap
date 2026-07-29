@@ -68,4 +68,5 @@ uv run python tests/read_xlsx.py path/to/file.xlsx
 
 - `docs/ARCHITECTURE.md` — workflow, modules, data flow, error handling strategy
 - `docs/PHILOSOPHY.md` — design rationale: why VLM over OCR pipeline
+- `docs/DEPLOYMENT.md` — step-by-step setup guide with Ollama, model pull, and troubleshooting (for AI agents)
 - `core/config.py` — all configurable parameters in one place

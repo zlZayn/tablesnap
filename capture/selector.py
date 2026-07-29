@@ -11,6 +11,7 @@ Usage::
 
 import tkinter as tk
 
+import keyboard
 from PIL import Image, ImageTk
 
 from capture.screen import capture_screen, save_temp
@@ -59,14 +60,27 @@ class RegionSelector:
         self._canvas.bind("<ButtonPress-1>", self._on_press)
         self._canvas.bind("<B1-Motion>", self._on_drag)
         self._canvas.bind("<ButtonRelease-1>", self._on_release)
+        self._canvas.bind("<Escape>", self._on_cancel)
         self._root.bind("<Escape>", self._on_cancel)
+
+        # 提示写在终端的横幅里，不在画布上叠加
 
     # -- public API -------------------------------------------------------
 
     def show(self) -> tuple[int, int, int, int] | None:
+        self._root.focus_force()
+        self._root.grab_set()
+        # Global Escape listener (tkinter window may not have keyboard focus
+        # on Windows until the user clicks — this ensures Esc works always)
+        hook = keyboard.on_press_key("esc", self._on_global_esc)
         self._root.mainloop()
+        keyboard.unhook_key(hook)
         self._root.destroy()
         return self._result
+
+    def _on_global_esc(self, _event) -> None:
+        """Called from the keyboard hook thread; schedule quit in the GUI thread."""
+        self._root.after(0, self._on_cancel)
 
     # -- event handlers ---------------------------------------------------
 
@@ -101,7 +115,8 @@ class RegionSelector:
         )
 
     def _on_release(self, event: tk.Event) -> None:
-        assert self._sx is not None and self._sy is not None
+        if self._sx is None or self._sy is None:
+            return  # stale release event after Esc-cancel
         x0, y0 = self._sx, self._sy
         x1, y1 = event.x, event.y
         left, top = min(x0, x1), min(y0, y1)

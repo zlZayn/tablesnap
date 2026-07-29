@@ -1,136 +1,132 @@
 # 部署指引（给 AI Agent 看）
 
-本文档是给 AI Agent 的交互式部署流程。**不要自动执行，每步先问对方。**
+本文档是决策式部署流程。**能自己干的不要问用户，不得已再问。**
 最终目标：让 tablesnap 能在对方机器上跑起来，截张图能正常导出 XLSX。
 
 ---
 
-## 流程总览
+## Step 0 — 网络环境
 
-一共 4 步，顺序推进：
+问用户所在地区。目的是判断下载用官方源还是国内镜像，避免网络慢或连不上。
 
-1. 确认环境（Python + uv 装好没）
-2. 装 Ollama + 拉模型
-3. 装项目依赖
-4. 跑起来验证
-
----
-
-## 第 1 步：确认环境
-
-先问对方 Python 和 uv 是否已安装。不要自己直接跑命令。
-
-检查项：
-
-- **Python**：跑 `python --version`，需要 >= 3.8
-- **uv**：跑 `uv --version`，看看有没有
-
-缺哪个就问对方要不要装。装 Python 让对方自己去 python.org 下载，
-装 uv 给这条命令让他自己跑：
-
-```
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-**确认没问题再继续。**
+**告诉用户：**
+- 官方源在大陆可能很慢甚至连不上
+- 镜像源在大陆下载快，但偶尔有缓存滞后或失效，不行切回官方源试试
 
 ---
 
-## 第 2 步：Ollama + 模型
+## Step 1 — uv
 
-### 2.1 检查 Ollama 是否已装
+> 先确保有 uv，后面 `uv sync` 会自动处理 Python 版本。
 
-别直接下载。先查：
+> `uv --version`
 
-- 跑 `ollama --version` — 有输出说明已装
-- 或者看看环境变量里有没有 `OLLAMA_HOST`、`OLLAMA_MODELS`
-- 或者问对方："Ollama 装过吗？"
-
-**没装** → 问对方是否要装。如果愿意，让他自己去 ollama.com 下载安装。
-
-### 2.2 拉取模型
-
-推荐使用默认模型（小、快、够用）：
-
-```
-ollama pull qwen3-vl:4b-instruct
-```
-
-可以向对方确认："默认用 qwen3-vl:4b-instruct，大概 2.5 GB，要换别的吗？"
-如果要换更大的（如 7B），提醒他显存需要 4-6 GB。
-
-**确认模型拉完再继续。**
+| 结果 | 处理 |
+| :--- | :--- |
+| 有输出 | 继续 |
+| 没有 | 直接装，不用问：`powershell -c "irm https://astral.sh/uv/install.ps1 \| iex"` `[镜像]` 如果装不上，告诉用户手动去 github.com/astral-sh/uv 下载 exe |
 
 ---
 
-## 第 3 步：项目依赖
+## Step 2 — Ollama
 
-在项目目录下跑（告诉对方要在哪个目录执行）：
+> `ollama --version`
 
-```
-uv sync
-```
+| 结果 | 处理 |
+| :--- | :--- |
+| 有输出 | 继续 |
+| 没有 | 告诉用户去 ollama.com 下载安装，装完再回来 |
 
-这会装好 `pyproject.toml` 里所有依赖。**等跑完，确认没报错。**
+确保 Ollama 在运行：
+> `ollama list`
 
----
-
-## 第 4 步：验证跑通
-
-分三层验证，每一层确认没问题再做下一层。
-
-### 4.1 单元测试（不需要 Ollama）
-
-```
-uv run python -m pytest -v
-```
-
-所有测试应该通过。如果有失败的，停下来修。
-
-### 4.2 手动启动 ollama
-
-先确保 Ollama 在运行：
-
-- 看看任务管理器有没有 `ollama.exe`
-- 或者跑 `ollama list` 看能不能连上
-- 没跑的话，让对方开个终端跑 `ollama serve`
-
-### 4.3 端到端测试（需要 Ollama + 模型）
-
-```
-uv run python tests/test_end_to_end.py
-```
-
-所有测试图片都应该正常识别并生成 XLSX。
-
-### 4.4 真正跑一次
-
-让用户双击项目目录下的 `run.bat`（不要用命令行跑，因为是交互式
-截图工具，双击更方便）。启动后按 `Ctrl+Alt+S`，框选屏幕上的表格区域，
-松开后应该自动生成 XLSX 到 `results/` 目录。
-
-**到这里能跑通就算部署完成。**
+| 结果 | 处理 |
+| :--- | :--- |
+| 能列出模型（可能空列表） | 继续 |
+| 连不上 | 后台启动：`ollama serve`（启动后稍等几秒再试） |
 
 ---
 
-## 如果过程中需要改配置
+## Step 3 — 视觉模型
 
-告诉对方位置，问要不要改，不要直接改文件：
+> `ollama list`
 
-| 想改什么 | 改哪个文件 | 改哪一行 |
+先看有没有现成的视觉模型（名字含 `vision` / `vl` / `llava` / `minicpm` 等）：
+- **有** → 问用户：
+  - **目的**：已有模型直接用，省去下载 2.5 GB 的时间
+  - **优缺点**：省流量省时间，不过如果已有模型太小或精度差，识别效果可能不如推荐的 `qwen3-vl:4b-instruct`
+  - 用户同意就用现有的（记下模型名，后面改 `VLM_MODEL`），不同意就继续往下
+- **没有 / 用户不想用现有的** → 继续往下
+
+拉模型，推荐 `qwen3-vl:4b-instruct`：
+> `ollama pull qwen3-vl:4b-instruct`
+
+拉取命令设置较长超时（30-60 分钟以上），2.5 GB 模型慢的时候可能要 2 小时。
+
+也可以问用户要不要换模型：
+- **目的**：根据机器配置和精度需求选择
+- **优缺点**：
+  - `4B`（默认）：2.5 GB，显存需求低（约 2 GB），速度快，精度够用
+  - `7B` 等更大模型：精度更高，但需要 4-6 GB 显存，识别更慢
+
+`[镜像]` 设环境变量走国内镜像。**告诉用户**：镜像在大陆通常更快，但偶尔有缓存失效的情况，不行就切回官方源：
+> `$env:HF_ENDPOINT = "https://hf-mirror.com"`
+> `ollama pull qwen3-vl:4b-instruct`
+
+---
+
+## Step 4 — 项目依赖
+
+> `uv sync` `[镜像]` 慢的话加 `-i https://pypi.tuna.tsinghua.edu.cn/simple`
+
+| 结果 | 处理 |
+| :--- | :--- |
+| 完成 | 继续 |
+| 报错 | 看报错修，修不好问用户 |
+
+---
+
+## Step 5 — 验证（单元测试，不需要 Ollama）
+
+> `uv run python -m pytest -v`
+
+| 结果 | 处理 |
+| :--- | :--- |
+| 通过 | 继续 |
+| 失败 | 看原因修，修不好告诉用户 |
+
+---
+
+## Step 6 — 验证（端到端，需要 Ollama + 模型）
+
+> `uv run python tests/test_end_to_end.py`
+
+| 结果 | 处理 |
+| :--- | :--- |
+| 生成 XLSX | 告诉用户，继续 |
+| 失败 | 检查 Ollama 是否在运行、模型名是否匹配配置 |
+
+---
+
+## Step 7 — 跑一次
+
+告诉用户双击 `run.bat`，按 `Ctrl+Alt+S` 截张表。
+
+- XLSX 文件生成在项目目录下的 `results/` 文件夹里，文件名带时间戳
+- 关掉黑窗口就退出程序
+- 如果热键没反应，可能是被其他软件占用了（如 NVIDIA、微信、QQ 截图），在 `core/config.py` 里改 `HOTKEY` 换一组快捷键试试
+
+**能跑通就算部署完成。**
+
+---
+
+## 配置速查
+
+| 想改什么 | 改哪个文件 | 具体位置 |
 | :--- | :--- | :--- |
-| 模型 | `core/config.py` | 第 34 行 `VLM_MODEL` |
-| Ollama 地址 | `core/config.py` | 第 35 行 `VLM_OLLAMA_URL` |
-| 输出目录 | `core/config.py` | 第 14 行 `OUTPUT_DIR` |
-| 快捷键 | `core/config.py` | 第 19 行 `HOTKEY` |
+| 模型 | `core/config.py` | `VLM_MODEL` |
+| Ollama 地址 | `core/config.py` | `VLM_OLLAMA_URL` |
+| 输出目录 | `core/config.py` | `OUTPUT_DIR` |
+| 快捷键 | `core/config.py` | `HOTKEY` |
 | 模型存储位置 | 系统环境变量 | `OLLAMA_MODELS` |
 | 提示词 | `vlm/prompts.py` | `SYSTEM_PROMPT` / `USER_PROMPT` |
-
----
-
-## 关键原则
-
-1. **先问，再动** — 每一步先确认对方意愿，不要自己偷偷执行
-2. **推荐默认** — 模型用 `qwen3-vl:4b-instruct`，路径用默认，少折腾
-3. **逐层验证** — 每步确认没问题再走下一步
-4. **不要替对方下载** — 给链接和命令让他自己操作

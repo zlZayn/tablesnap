@@ -1,21 +1,12 @@
 # Architecture
 
-## What this tool does
-
-Screenshots a screen region, sends it to a local vision-language model
-(Ollama + qwen3-vl:4b-instruct), and saves the extracted table as an
-`.xlsx` file.  Everything runs on one thread, one process.
-
-## Why it looks the way it does
-
-The core decision is **no OCR pipeline**.  There is no text extraction,
-no column detection, no layout reconstruction.  Those are all things
-the VLM handles in a single call.  The pipeline only does three things:
-grab pixels, send them to the model, and write the result to disk.
-
-This keeps the Python code small and the failure modes simple.  The
-tradeoff is that table extraction quality depends entirely on the model
-prompt — which is why `docs/PHILOSOPHY.md` exists.
+Screenshots a region, sends it to a local VLM (Ollama +
+qwen3-vl:4b-instruct), saves the extracted table as `.xlsx`.  One
+thread, one process, **no OCR pipeline** — no text extraction, layout
+reconstruction, or column detection.  The VLM handles all of that in a
+single call.  The Python code does three things: grab pixels, POST to
+the model, write the result.  Table quality depends entirely on the
+prompt (`docs/PHILOSOPHY.md`).
 
 ## Runtime flow
 
@@ -23,60 +14,28 @@ prompt — which is why `docs/PHILOSOPHY.md` exists.
 run.bat → uv run python main.py → main_loop()
 
 main_loop():
-    1. _ensure_ollama()          # check API → auto-start if missing
-    2. wait_for_hotkey() loop:
+    1. print_check("检查 Ollama……")  # dim status message
+    2. _ensure_ollama()              # check API → auto-start if missing
+    3. print_banner()                # Rich Panel with hotkey + output dir
+    4. wait_for_hotkey() loop:
          │
-         └─ process_screenshot():
-              a) capture_region()
-                 ├─ capture_screen()     # mss → Pillow RGB
-                 ├─ RegionSelector.show() # tkinter overlay (blocking)
-                 └─ save_temp(crop)       # temp PNG → return path
-              b) OllamaClient.analyze(image_bytes)
-                 └─ urllib POST → /api/generate → JSON → PSV text
-              c) psv_to_xlsx(psv_text)
-                 └─ csv.reader (pipe delimiter) → openpyxl → results/
+          └─ process_screenshot():            (core/pipeline.py)
+               a) print_stage("capture")       # bold cyan ▸
+               b) capture_region()             (capture/selector.py)
+                  ├─ capture_screen()          (capture/screen.py, mss)
+                  ├─ RegionSelector.show()     # tkinter overlay (blocking)
+                  └─ save_temp(crop)           # temp PNG path
+               c) print_stage("vlm")          # bold cyan ▸
+               d) OllamaClient.analyze()       (vlm/client.py)
+                  └─ POST /api/generate → JSON → PSV text
+               e) print_stage("export")       # bold cyan ▸
+               f) psv_to_xlsx()                (export/xlsx.py)
+                  └─ csv.reader (|) → openpyxl → results/
 ```
 
-Each cycle runs end-to-end on the main thread.  There are no background
-workers, no thread pools, no async.
+All on one thread, no background workers, no thread pools, no async.
 
-## Module map and call chain
-
-```
-main.py → core.pipeline.main_loop()
-  → core.hotkey.wait_for_hotkey() (50 ms poll loop, main thread)
-  → core.pipeline.process_screenshot()
-       → capture.capture_region() (capture/selector.py:121)
-            → capture.capture_screen() (capture/screen.py:17, mss → Pillow RGB)
-            → RegionSelector.show() (tkinter overlay, blocks until user releases)
-            → capture.save_temp() (capture/screen.py:29, crops and saves PNG)
-       → vlm.OllamaClient.analyze() (vlm/client.py:49)
-            builds the request body in _build_request_body()
-            POSTs to {VLM_OLLAMA_URL}/api/generate
-            parses JSON response, returns PSV text
-       → export.psv_to_xlsx() (export/xlsx.py:104)
-            fences extraction → csv.reader (pipe delimiter)
-            → export_to_xlsx() → openpyxl → results/
-```
-
-### Cross-cutting concern: configuration
-
-Everything tunable lives in `core/config.py`: paths, hotkey, overlay
-settings, VLM model + URL + temperature + timeout.  No magic numbers
-in any other module.
-
-### Cross-cutting concern: error handling
-
-Two layers:
-
-1. **Stage level** — `process_screenshot()` wraps each stage in its own
-   `try/except`; a failure in one stage prints a descriptive message and
-   the hotkey loop continues so the user can retry immediately.
-2. **Program level** — `main_loop()` wraps the entire body in
-   `except KeyboardInterrupt` so Ctrl+C at any point exits cleanly
-   (no stack trace, no batch-file prompt).
-
-## The three stages in detail
+## Stage details
 
 ### Stage 1: Capture
 
@@ -98,11 +57,20 @@ Key numbers (from `core/config.py`):
 | `DASH` | `(4,2)` | Rectangle dash pattern |
 
 Cancel is handled by `<Escape>` (returns `None`) and `MIN_SIZE` check
-(selections < 10 px are rejected).
+(selections < 10 px are rejected).  A global Escape hook (registered via
+the ``keyboard`` library) ensures Esc works even before the tkinter
+window receives keyboard focus on Windows.  The "取消截图  Esc" hint
+is shown in the startup banner (``output.print_banner()``) rather than
+drawn on the overlay, because tkinter's font rendering for CJK
+characters is unreliable across systems.
 
 ### Stage 2: VLM analysis
 
 **Input:** PNG image bytes  →  **Output:** PSV text string (or error)
+
+Before the stage begins the pipeline shows ``▸ vlm`` (via
+``print_stage("vlm")``), so the user knows analysis is running during
+the 5-20 second Ollama call.
 
 `OllamaClient.analyze()` (in `vlm/client.py`) base64-encodes the image
 and POSTs it to `{VLM_OLLAMA_URL}/api/generate` with the request body
@@ -131,6 +99,10 @@ Possible return values:
 
 **Input:** PSV text  →  **Output:** absolute path to `.xlsx` file
 
+``▸ export`` (via ``print_stage("export")``) appears before the export
+stage so the user sees that capture + analysis succeeded and writing
+has begun.
+
 `psv_to_xlsx()` (in `export/xlsx.py`) applies one safety net: if the
 VLM wrapped its output in a ` ```psv ``` markdown fence, the content
 inside the fence is extracted.  The text is then split into lines,
@@ -146,24 +118,62 @@ If `psv_to_xlsx()` receives empty text after cleaning, it raises
 `ValueError` — the pipeline catches this in the export-stage
 `try/except` and reports it clearly.
 
-## Ollama auto-start
+## Cross-cutting
 
-`_ensure_ollama()` in `core/pipeline.py` runs once at startup:
+### Configuration
 
-1. Tries `GET {VLM_OLLAMA_URL}/api/tags` with a 2-second timeout.
-   If reachable, returns `True` immediately.
-2. If not reachable, launches `ollama serve` via `subprocess.Popen`
-   with `CREATE_NO_WINDOW` (no visible console on Windows) and redirects
-   stdout/stderr/stdin to `DEVNULL`.
-3. Polls the same endpoint every 500 ms for up to 4 seconds.
-4. Returns `True` if the API becomes reachable, `False` otherwise.
+Everything tunable lives in `core/config.py`: paths, hotkey, overlay
+settings, VLM model + URL + temperature + timeout.  No magic numbers
+in any other module.
 
-When `_ensure_ollama()` returns `False`, the banner is printed with a
-yellow warning and a manual-start instruction.  The tool does **not**
-block — the user can start Ollama in another window and continue using
-tablesnap.
+### Console output
 
-## Hotkey system
+All user-facing output goes through `core/output.py`.  Every
+`print_*()` call uses a consistent indent (`PAD` / `TIP`) and Rich
+markup colour.  Other modules never import `rich` directly —
+changing the look means editing one file.
+
+```
+output.py
+├── print_banner()    # Rich Panel (startup)
+├── print_check()     # dim "checking…" (startup probes)
+├── print_ok()        # green (success)
+├── print_warn()      # yellow (warning)
+├── print_err()       # red (error)
+├── print_tip()       # dim + indent + ">" (hint / suggestion)
+├── print_stage()     # bold cyan ▸ (stage header)
+├── print_timing()    # "label  12.34s" (elapsed time)
+├── print_rule()      # Rich Rule (separator between cycles)
+└── print_break()     # "────" (separator inside timing summary)
+```
+
+### Error handling
+
+Two layers:
+
+1. **Stage level** — Capture has a dedicated inner ``try/except``;
+   VLM and export rely on the outer ``try`` in ``process_screenshot()``.
+   Either way, a failure prints a descriptive message (via
+   ``output.print_err()`` / ``output.print_warn()``) and the hotkey loop
+   continues so the user can retry immediately.
+2. **Program level** — `main_loop()` wraps the entire body in
+   `except KeyboardInterrupt` so Ctrl+C cleans up without a stack
+   trace or batch-file prompt.
+
+### Ollama auto-start
+
+`_ensure_ollama()` runs once at startup, before the banner, so the
+hotkey is ready immediately.  It shows a dim "检查 Ollama……" message
+while probing `GET {VLM_OLLAMA_URL}/api/tags`:
+
+1. **Reachable** (2 s timeout) → return ``True``.
+2. **Not reachable** → launch `ollama serve` (hidden, ``CREATE_NO_WINDOW``).
+3. Poll every 500 ms for up to 4 s → if reachable now, return ``True``.
+4. Otherwise return ``False`` — a yellow warning with manual-start
+   hint appears (before the banner, so the user sees it).  The tool
+   does **not** block; the user can start Ollama manually and continue.
+
+### Hotkey system
 
 `core/hotkey.wait_for_hotkey()` polls `keyboard.is_pressed()` every
 50 ms on the caller's thread (the main thread).  When the hotkey is
@@ -204,7 +214,7 @@ Three files, each with a distinct scope:
 
 | File | Scope | Needs VLM? |
 | :--- | :--- | :--- |
-| `tests/test_vlm.py` | `OllamaClient.analyse()` with mocked urllib | No |
+| `tests/test_vlm.py` | `OllamaClient.analyze()` with mocked urllib | No |
 | `tests/test_xlsx.py` | `psv_to_xlsx()` PSV parsing + export | No |
 | `tests/test_end_to_end.py` | Full pipeline on 6 sample images | Yes |
 | `tests/read_xlsx.py` | Standalone debug tool: dump XLSX rows | No |
@@ -221,8 +231,10 @@ tablesnap/
 ├── run.bat                  # launcher (exit /b)
 ├── pyproject.toml           # project config + dependencies
 ├── core/
+│   ├── __init__.py          # docstring only
 │   ├── config.py            # all tunable parameters
 │   ├── hotkey.py            # polling-based hotkey wait
+│   ├── output.py            # centralised console output (all print_*)
 │   └── pipeline.py          # main_loop + process_screenshot + _ensure_ollama
 ├── capture/
 │   ├── __init__.py
