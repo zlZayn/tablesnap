@@ -1,8 +1,8 @@
-"""Read an Excel file and print as text table.
+"""Read an XLSX file and print as text table.
 
 Usage:
-    uv run python tests/read_excel.py path/to/file.xlsx
-    uv run python tests/read_excel.py path/to/file.xlsx --rows 5
+    uv run python tests/read_xlsx.py path/to/file.xlsx
+    uv run python tests/read_xlsx.py path/to/file.xlsx --rows 5
 """
 
 import sys
@@ -11,19 +11,19 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 
-def dump_excel(excel_path: str, max_rows: int | None = None) -> None:
+def dump_xlsx(xlsx_path: str, max_rows: int | None = None) -> None:
     """Print an openpyxl workbook as rows of lists."""
-    wb = load_workbook(excel_path)
+    wb = load_workbook(xlsx_path)
     ws = wb.active
     if ws is None:
-        print(f"No active sheet in {excel_path}")
+        print(f"No active sheet in {xlsx_path}")
         return
 
     nrows = ws.max_row or 0
     ncols = ws.max_column or 0
     limit = nrows if max_rows is None else min(nrows, max_rows)
 
-    print(f"File : {excel_path}")
+    print(f"File : {xlsx_path}")
     print(f"Sheet: {ws.title}  ({nrows}r x {ncols}c)")
     print()
 
@@ -46,7 +46,6 @@ def dump_excel(excel_path: str, max_rows: int | None = None) -> None:
 
 def main() -> None:
     args = [a.lower() for a in sys.argv[1:]]
-    rows_flag = "--rows" in args or "-n" in args
 
     # Extract positional paths (everything before --rows / -n)
     paths: list[str] = []
@@ -74,7 +73,7 @@ def main() -> None:
         if not Path(p).exists():
             print(f"File not found: {p}")
             continue
-        dump_excel(p, max_rows=max_rows)
+        dump_xlsx(p, max_rows=max_rows)
         print()
 
 

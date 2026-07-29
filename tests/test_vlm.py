@@ -34,16 +34,16 @@ class TestOllamaClient(unittest.TestCase):
         return resp
 
     # ------------------------------------------------------------------
-    # Test 1: normal CSV response
+    # Test 1: normal PSV response
     # ------------------------------------------------------------------
     @patch("urllib.request.urlopen")
-    def test_analyze_returns_csv_response(self, mock_urlopen):
-        csv_data = "Name,Age\nAlice,30\nBob,25\n"
-        mock_urlopen.return_value = self._mock_response({"response": csv_data})
+    def test_analyze_returns_psv_response(self, mock_urlopen):
+        psv_data = "Name|Age\nAlice|30\nBob|25\n"
+        mock_urlopen.return_value = self._mock_response({"response": psv_data})
 
         result = self.client.analyze(self.sample_png)
 
-        self.assertEqual(result, csv_data)
+        self.assertEqual(result, psv_data)
 
     # ------------------------------------------------------------------
     # Test 2: NO_TABLE response passed through

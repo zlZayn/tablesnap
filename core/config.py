@@ -1,4 +1,4 @@
-"""Centralised configuration for the screenshot-to-excel pipeline.
+"""Centralised configuration for the screenshot-to-xlsx pipeline.
 
 All tunable constants live here so that tweaking VLM parameters,
 preprocessing parameters, or output paths never requires hunting

@@ -11070,7 +11070,7 @@ wheels = [
 ]
 
 [[package]]
-name = "screenshot-ocr"
+name = "tablesnap"
 version = "0.2.0"
 source = { virtual = "." }
 dependencies = [

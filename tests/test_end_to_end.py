@@ -1,4 +1,4 @@
-"""End-to-end batch test: VLM analyze -> CSV parse -> Excel export.
+"""End-to-end batch test: VLM analyze -> PSV parse -> XLSX export.
 
 Iterates over all images in ``tests/test_table_pics/`` and runs the full
 VLM pipeline on each one, saving results to ``tests/test_output/`` for
@@ -6,7 +6,7 @@ manual review.
 
 Usage:
     uv run python tests/test_end_to_end.py             # run all (auto-cleans old xlsx)
-    uv run python tests/test_end_to_end.py --dump      # run all + print Excel content
+    uv run python tests/test_end_to_end.py --dump      # run all + print XLSX content
     uv run python tests/test_end_to_end.py --show      # show last results (no VLM)
     uv run python tests/test_end_to_end.py --image xxx.png  # single image
 """
@@ -36,7 +36,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 #  Display helpers
 # ===================================================================
 
-def _display_excel(ws, max_rows: int = 30) -> None:
+def _display_xlsx(ws, max_rows: int = 30) -> None:
     """Print an openpyxl worksheet as rows of lists."""
     for row in ws.iter_rows(
         min_row=1,
@@ -51,17 +51,17 @@ def _display_report(entries: list[dict]) -> None:
     for entry in entries:
         print(f"=== {entry['image']} ===")
         status = entry.get("status", "?")
-        if status == "ok" and entry.get("excel_path"):
-            # Load the Excel to show content
-            xp = entry["excel_path"]
+        if status == "ok" and entry.get("xlsx_path"):
+            # Load the XLSX to show content
+            xp = entry["xlsx_path"]
             from openpyxl import load_workbook
             wb = load_workbook(xp)
             ws = wb.active
             if ws is not None:
                 print(f"  VLM: {entry['vlm_time_s']}s  "
-                      f"| Excel: {ws.max_row}r x {ws.max_column}c"
-                      f"  | CSV len: {entry['csv_len']}")
-                _display_excel(ws)
+                      f"| XLSX: {ws.max_row}r x {ws.max_column}c"
+                      f"  | PSV len: {entry.get('psv_len', entry.get('csv_len', '?'))}")
+                _display_xlsx(ws)
         else:
             print(f"  STATUS: {status}", end="")
             if entry.get("error"):
@@ -92,22 +92,22 @@ def _print_row(r: dict, rows_str: str) -> None:
 # ===================================================================
 
 def run_one(image_path: Path) -> dict:
-    """Run the full VLM->CSV->Excel pipeline on a single image.
+    """Run the full VLM->PSV->XLSX pipeline on a single image.
 
-    Returns a dict with stats and the output Excel path (or error).
+    Returns a dict with stats and the output XLSX path (or error).
     """
     result = {
         "image": image_path.name,
         "size_bytes": image_path.stat().st_size,
         "status": "ok",
         "vlm_time_s": None,
-        "csv_len": None,
-        "excel_path": None,
+        "psv_len": None,
+        "xlsx_path": None,
         "error": None,
     }
 
     from vlm.client import OllamaClient
-    from export.excel import csv_to_excel
+    from export.xlsx import psv_to_xlsx
     from core.config import VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
 
     client = OllamaClient(
@@ -118,25 +118,26 @@ def run_one(image_path: Path) -> dict:
 
     image_bytes = image_path.read_bytes()
     t0 = time.perf_counter()
-    csv_text = client.analyze(image_bytes)
+    psv_text = client.analyze(image_bytes)
     t1 = time.perf_counter()
     result["vlm_time_s"] = round(t1 - t0, 2)
 
-    if csv_text.startswith("ERROR:"):
+    if psv_text.startswith("ERROR:"):
         result["status"] = "error"
-        result["error"] = csv_text
+        result["error"] = psv_text
         return result
 
-    if csv_text.strip() == "NO_TABLE":
+    if psv_text.strip() == "NO_TABLE":
         result["status"] = "no_table"
-        result["csv_len"] = 0
+        result["psv_len"] = 0
         return result
 
-    result["csv_len"] = len(csv_text)
+    result["psv_raw"] = psv_text  # full VLM output for --dump
+    result["psv_len"] = len(psv_text)
 
     try:
-        excel_path = csv_to_excel(csv_text, output_dir=str(TEST_OUTPUT))
-        result["excel_path"] = excel_path
+        xlsx_path = psv_to_xlsx(psv_text, output_dir=str(TEST_OUTPUT))
+        result["xlsx_path"] = xlsx_path
     except ValueError as e:
         result["status"] = "parse_error"
         result["error"] = str(e)
@@ -147,11 +148,11 @@ def run_one(image_path: Path) -> dict:
     return result
 
 
-def _excel_shape(excel_path: str) -> str:
-    """Return 'rowsxcols' string for a given Excel file."""
+def _xlsx_shape(xlsx_path: str) -> str:
+    """Return 'rowsxcols' string for a given XLSX file."""
     from openpyxl import load_workbook
     try:
-        wb = load_workbook(excel_path)
+        wb = load_workbook(xlsx_path)
         ws = wb.active
         if ws is not None:
             return f"{ws.max_row}x{ws.max_column}"
@@ -161,7 +162,7 @@ def _excel_shape(excel_path: str) -> str:
 
 
 def _clean_output() -> None:
-    """Remove old Excel files from test output to avoid accumulation."""
+    """Remove old XLSX files from test output to avoid accumulation."""
     count = 0
     for f in TEST_OUTPUT.glob("*.xlsx"):
         f.unlink()
@@ -189,7 +190,7 @@ def run_all() -> list[dict]:
 
     for img in images:
         r = run_one(img)
-        rows_str = _excel_shape(r["excel_path"]) if r["excel_path"] else "-"
+        rows_str = _xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
         _print_row(r, rows_str)
         results.append(r)
 
@@ -207,8 +208,8 @@ def run_all() -> list[dict]:
             "size_bytes": r["size_bytes"],
             "status": r["status"],
             "vlm_time_s": r["vlm_time_s"],
-            "csv_len": r["csv_len"],
-            "excel_path": r["excel_path"],
+            "psv_len": r["psv_len"],
+            "xlsx_path": r["xlsx_path"],
             "error": r["error"],
         }
         for r in results
@@ -251,31 +252,57 @@ def main():
                 print(f"Image not found: {img_path}")
                 return
             r = run_one(img_path)
-            rows_str = _excel_shape(r["excel_path"]) if r["excel_path"] else "-"
+            rows_str = _xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
             _print_header()
             _print_row(r, rows_str)
             print()
             # Also print content if success
-            if r["status"] == "ok" and r["excel_path"]:
+            if r["status"] == "ok" and r["xlsx_path"]:
                 from openpyxl import load_workbook
-                wb = load_workbook(r["excel_path"])
+                wb = load_workbook(r["xlsx_path"])
                 ws = wb.active
                 if ws is not None:
-                    _display_excel(ws)
+                    _display_xlsx(ws)
         return
 
     if "--dump" in args:
         results = run_all()
         print()
         for r in results:
-            if r["status"] == "ok" and r["excel_path"]:
+            print(f"=== {r['image']} ===")
+            print(f"  status: {r['status']}")
+            if r["vlm_time_s"]:
+                print(f"  vlm:    {r['vlm_time_s']}s")
+            print()
+
+            # Print raw VLM output
+            raw = r.get("psv_raw", "")
+            if raw:
+                print("  --- VLM raw output ---")
+                for line in raw.splitlines():
+                    print(f"  |{line}")
+                print("  ---")
+            print()
+
+            # Print XLSX content
+            if r["status"] == "ok" and r["xlsx_path"]:
+                xp = r["xlsx_path"]
+                print(f"  --- XLSX ({xp}) ---")
                 from openpyxl import load_workbook
-                wb = load_workbook(r["excel_path"])
+                wb = load_workbook(xp)
                 ws = wb.active
                 if ws is not None:
-                    print(f"=== {r['image']} ===")
-                    _display_excel(ws)
-                    print()
+                    print(f"  sheet: {ws.title}  ({ws.max_row}r x {ws.max_column}c)")
+                    for row in ws.iter_rows(
+                        min_row=1,
+                        max_row=min(ws.max_row or 0, 30),
+                        values_only=True,
+                    ):
+                        print(f"    {list(row)}")
+                print()
+            elif r.get("error"):
+                print(f"  error: {r['error']}")
+                print()
         return
 
     # Default: run all

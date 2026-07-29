@@ -1,40 +1,40 @@
-"""Unit tests for export.excel.csv_to_excel."""
+"""Unit tests for export.xlsx.psv_to_xlsx."""
 
 import tempfile
 import unittest
 from pathlib import Path
 
-from export.excel import csv_to_excel
+from export.xlsx import psv_to_xlsx
 
 
-class TestCsvToExcel(unittest.TestCase):
-    """Verify csv_to_excel fence extraction and empty handling —
+class TestPsvToXlsx(unittest.TestCase):
+    """Verify psv_to_xlsx fence extraction and empty handling —
     all via temp directory isolation."""
 
     # ------------------------------------------------------------------
-    # Test 1: basic CSV without fence
+    # Test 1: basic PSV without fence
     # ------------------------------------------------------------------
-    def test_basic_csv(self):
-        csv = "Name,Age\nAlice,30\nBob,25"
+    def test_basic_psv(self):
+        psv = "Name|Age\nAlice|30\nBob|25"
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = csv_to_excel(csv, output_dir=tmpdir)
+            path = psv_to_xlsx(psv, output_dir=tmpdir)
             self.assertTrue(Path(path).exists())
             self.assertTrue(path.endswith(".xlsx"))
 
     # ------------------------------------------------------------------
-    # Test 2: CSV inside ```csv fence
+    # Test 2: PSV inside ```psv fence
     # ------------------------------------------------------------------
-    def test_csv_fence_extraction(self):
-        csv = (
+    def test_psv_fence_extraction(self):
+        psv = (
             "Some text before\n"
-            "```csv\n"
-            "Name,Age\n"
-            "Alice,30\n"
+            "```psv\n"
+            "Name|Age\n"
+            "Alice|30\n"
             "```\n"
             "Some text after"
         )
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = csv_to_excel(csv, output_dir=tmpdir)
+            path = psv_to_xlsx(psv, output_dir=tmpdir)
             self.assertTrue(Path(path).exists())
             self.assertTrue(path.endswith(".xlsx"))
 
@@ -43,7 +43,7 @@ class TestCsvToExcel(unittest.TestCase):
     # ------------------------------------------------------------------
     def test_empty_raises(self):
         with self.assertRaises(ValueError):
-            csv_to_excel("")
+            psv_to_xlsx("")
 
 
 if __name__ == "__main__":

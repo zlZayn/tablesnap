@@ -12,7 +12,7 @@ from rich.table import Table
 from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR, VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
 from core.hotkey import wait_for_hotkey
 from vlm.client import OllamaClient
-from export.excel import csv_to_excel
+from export.xlsx import psv_to_xlsx
 from capture.selector import capture_region
 
 console = Console()
@@ -27,7 +27,7 @@ def _log_stage(label: str, elapsed: float, detail: str = "") -> None:
     print(f"  {padded}{rest}")
 
 
-def _excel_shape(path: str) -> str:
+def _xlsx_shape(path: str) -> str:
     """Read xlsx shape quickly — '3r x 5c' or '?'."""
     try:
         wb = load_workbook(path)
@@ -40,7 +40,7 @@ def _excel_shape(path: str) -> str:
 
 
 def process_screenshot() -> None:
-    """1. Capture region → 2. VLM analyze → 3. Export to Excel."""
+    """1. Capture region → 2. VLM analyze → 3. Export to XLSX."""
     try:
         # -- Step 1: Capture --
         print(f"  [{'capture'.center(18)}]")
@@ -62,17 +62,17 @@ def process_screenshot() -> None:
             model=VLM_MODEL,
             timeout=VLM_TIMEOUT,
         )
-        csv_text = client.analyze(image_bytes)
+        psv_text = client.analyze(image_bytes)
         t_vlm = time.perf_counter() - t_vlm
 
-        raw_stripped = csv_text.strip()
+        raw_stripped = psv_text.strip()
 
         # -- Step 3: Export --
         t_xport = time.perf_counter()
         if raw_stripped.startswith("ERROR:") or raw_stripped == "NO_TABLE":
-            excel_path = None
+            xlsx_path = None
         else:
-            excel_path = csv_to_excel(csv_text)
+            xlsx_path = psv_to_xlsx(psv_text)
         t_xport = time.perf_counter() - t_xport
 
         # -- Summary --
@@ -82,13 +82,13 @@ def process_screenshot() -> None:
         print(f"  {'─' * 40}")
         _log_stage("total", total)
 
-        if excel_path:
-            shape = _excel_shape(excel_path)
+        if xlsx_path:
+            shape = _xlsx_shape(xlsx_path)
             extras = []
-            if "```" in csv_text:
+            if "```" in psv_text:
                 extras.append("fenced")
             hint = f"  ({shape})" + (f"  [{', '.join(extras)}]" if extras else "")
-            console.print(f"\n  [green]  {excel_path}  {hint}[/green]")
+            console.print(f"\n  [green]  {xlsx_path}  {hint}[/green]")
         elif raw_stripped == "NO_TABLE":
             console.print("\n  [yellow]no table detected in the selected region[/yellow]")
             console.print("       [dim]→ Make sure the area has a table with column headers[/dim]")
@@ -113,7 +113,7 @@ def main_loop() -> None:
 
     panel = Panel(
         grid,
-        title="截图 \u2192 Excel",
+        title="截图 \u2192 XLSX",
         border_style="cyan",
         padding=(1, 2),
     )

@@ -1,4 +1,4 @@
-"""Excel export functionality."""
+"""XLSX export functionality."""
 
 import csv
 import re
@@ -16,12 +16,12 @@ _HIGHLIGHT_FILL = PatternFill(
 )
 
 
-def export_to_excel(
+def export_to_xlsx(
     data: list[list[str]],
     output_dir: str | None = None,
     highlight_rows: list[int] | None = None,
 ) -> str:
-    """Export a 2-D grid of text data to an Excel file.
+    """Export a 2-D grid of text data to an XLSX file.
 
     Creates a timestamped ``.xlsx`` file under *output_dir* (defaults to
     ``config.OUTPUT_DIR``).  Column widths are auto-fitted with a 50-char
@@ -33,7 +33,7 @@ def export_to_excel(
         highlight_rows: 0-based row indices to highlight with yellow fill.
 
     Returns:
-        Absolute path to the generated Excel file.
+        Absolute path to the generated XLSX file.
 
     Raises:
         OSError:  If the directory cannot be created or the file written.
@@ -83,38 +83,38 @@ def export_to_excel(
     return str(filepath)
 
 
-def csv_to_excel(
-    csv_text: str,
+def psv_to_xlsx(
+    psv_text: str,
     output_dir: str | None = None,
 ) -> str:
-    """Parse CSV text from VLM output and export to Excel.
+    """Parse PSV text from VLM output and export to XLSX.
 
-    If the VLM's response is wrapped in a ```csv fence, the content
-    inside the fence is used; otherwise the full text is treated as CSV.
+    If the VLM's response is wrapped in a ```psv fence, the content
+    inside the fence is used; otherwise the full text is treated as PSV.
     Empty lines are dropped.  Each line is parsed with :mod:`csv.reader`.
 
     Args:
-        csv_text:    Raw text returned by the VLM.
+        psv_text:    Raw text returned by the VLM.
         output_dir:  Override output directory (default config.OUTPUT_DIR).
 
     Returns:
-        Absolute path to the generated Excel file.
+        Absolute path to the generated XLSX file.
 
     Raises:
-        ValueError: If csv_text is empty after cleaning.
+        ValueError: If psv_text is empty after cleaning.
         OSError:    If file cannot be written.
     """
-    # Try to extract CSV from a markdown code fence first
-    match = re.search(r"```csv\s*\n(.+?)\n```", csv_text, re.DOTALL)
-    raw = match.group(1) if match else csv_text.strip()
+    # Try to extract PSV from a markdown code fence first
+    match = re.search(r"```psv\s*\n(.+?)\n```", psv_text, re.DOTALL)
+    raw = match.group(1) if match else psv_text.strip()
 
     lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
     if not lines:
-        raise ValueError("csv_text is empty after cleaning")
+        raise ValueError("psv_text is empty after cleaning")
 
     parsed: list[list[str]] = []
     for line in lines:
-        reader = csv.reader([line])
+        reader = csv.reader([line], delimiter="|")
         parsed.append(next(reader))
 
-    return export_to_excel(parsed, output_dir)
+    return export_to_xlsx(parsed, output_dir)
