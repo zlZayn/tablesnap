@@ -68,4 +68,5 @@ uv run python tests/read_xlsx.py path/to/file.xlsx
 
 - `docs/ARCHITECTURE.md` — 工作流、模块关系、数据流向、错误处理策略
 - `docs/PHILOSOPHY.md` — 设计哲学：为什么选择 VLM 直出而非 OCR 流水线
+- `docs/DEPLOYMENT.md` — Ollama 部署、模型管理、配置路径参考（面向 AI Agent）
 - `core/config.py` — 所有可调参数的统一配置入口
