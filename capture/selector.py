@@ -63,7 +63,7 @@ class RegionSelector:
         self._canvas.bind("<Escape>", self._on_cancel)
         self._root.bind("<Escape>", self._on_cancel)
 
-        # 提示写在终端的横幅里，不在画布上叠加
+        # Hint is shown in the terminal banner, not drawn on the overlay
 
     # -- public API -------------------------------------------------------
 

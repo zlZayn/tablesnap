@@ -13,7 +13,6 @@ from core.output import (
     console,
     print_banner,
     print_break,
-    print_check,
     print_err,
     print_ok,
     print_rule,
@@ -21,6 +20,7 @@ from core.output import (
     print_timing,
     print_tip,
     print_warn,
+    spinner,
 )
 from vlm.client import OllamaClient
 from export.xlsx import psv_to_xlsx
@@ -60,7 +60,7 @@ def process_screenshot() -> None:
         except Exception as exc:
             _log_stage("capture", time.perf_counter() - t_cap)
             print_err(f"capture failed: {exc}")
-            print_tip("Check display / permissions, then try again")
+            print_tip("Check display and permissions, then try again")
             return
         t_cap = time.perf_counter() - t_cap
 
@@ -79,7 +79,8 @@ def process_screenshot() -> None:
             model=VLM_MODEL,
             timeout=VLM_TIMEOUT,
         )
-        psv_text = client.analyze(image_bytes)
+        with spinner("vlm analyzing"):
+            psv_text = client.analyze(image_bytes)
         t_vlm = time.perf_counter() - t_vlm
         _log_stage("vlm analyze", t_vlm)
 
@@ -160,13 +161,16 @@ def _ensure_ollama(url: str, wait: int = 4) -> bool:
 def main_loop() -> None:
     """Print banner and enter the hotkey-polling loop."""
     # Check Ollama before showing the banner so the hotkey is ready immediately.
-    print_check("检查 Ollama……")
-    if not _ensure_ollama(VLM_OLLAMA_URL):
-        print_warn(f"Ollama not detected at {VLM_OLLAMA_URL}")
+    with spinner("checking Ollama"):
+        ok = _ensure_ollama(VLM_OLLAMA_URL)
+    if ok:
+        print_ok("ollama reachable")
+    else:
+        print_warn(f"ollama unreachable ({VLM_OLLAMA_URL})")
         print_tip("Auto-launch failed. Start manually:  ollama serve")
         console.print()
 
-    print_banner(HOTKEY.title(), str(OUTPUT_DIR.resolve()))
+    print_banner(HOTKEY.title(), str(OUTPUT_DIR.resolve()), VLM_MODEL)
 
     try:
         while True:
@@ -175,4 +179,4 @@ def main_loop() -> None:
             process_screenshot()
             print_rule()
     except KeyboardInterrupt:
-        console.print("\n[green]已退出[/green]")
+        console.print("\n[green]exited[/green]")

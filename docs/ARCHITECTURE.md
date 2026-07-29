@@ -14,10 +14,9 @@ prompt (`docs/PHILOSOPHY.md`).
 run.bat → uv run python main.py → main_loop()
 
 main_loop():
-    1. print_check("检查 Ollama……")  # dim status message
-    2. _ensure_ollama()              # check API → auto-start if missing
-    3. print_banner()                # Rich Panel with hotkey + output dir
-    4. wait_for_hotkey() loop:
+    1. spinner("checking Ollama")    # animated → cleared; result on next line
+    2. print_banner()                # Rich Panel with hotkey, model, output dir
+    3. wait_for_hotkey() loop:
          │
           └─ process_screenshot():            (core/pipeline.py)
                a) print_stage("capture")       # bold cyan ▸
@@ -59,7 +58,7 @@ Key numbers (from `core/config.py`):
 Cancel is handled by `<Escape>` (returns `None`) and `MIN_SIZE` check
 (selections < 10 px are rejected).  A global Escape hook (registered via
 the ``keyboard`` library) ensures Esc works even before the tkinter
-window receives keyboard focus on Windows.  The "取消截图  Esc" hint
+window receives keyboard focus on Windows.  The "Esc 取消选择" hint
 is shown in the startup banner (``output.print_banner()``) rather than
 drawn on the overlay, because tkinter's font rendering for CJK
 characters is unreliable across systems.
@@ -69,8 +68,11 @@ characters is unreliable across systems.
 **Input:** PNG image bytes  →  **Output:** PSV text string (or error)
 
 Before the stage begins the pipeline shows ``▸ vlm`` (via
-``print_stage("vlm")``), so the user knows analysis is running during
-the 5-20 second Ollama call.
+``print_stage("vlm")``).  The blocking ``client.analyze()`` call is
+wrapped in a transient spinner (``with spinner("vlm analyzing")``) —
+an animated ``⠋`` rotates on the same line during the 5-20 second
+Ollama call.  The spinner line is removed when the call completes,
+replaced by the timing line.
 
 `OllamaClient.analyze()` (in `vlm/client.py`) base64-encodes the image
 and POSTs it to `{VLM_OLLAMA_URL}/api/generate` with the request body
@@ -135,8 +137,7 @@ changing the look means editing one file.
 
 ```
 output.py
-├── print_banner()    # Rich Panel (startup)
-├── print_check()     # dim "checking…" (startup probes)
+├── print_banner()    # Rich Panel (startup); shows hotkey, model, save-path
 ├── print_ok()        # green (success)
 ├── print_warn()      # yellow (warning)
 ├── print_err()       # red (error)
@@ -144,7 +145,8 @@ output.py
 ├── print_stage()     # bold cyan ▸ (stage header)
 ├── print_timing()    # "label  12.34s" (elapsed time)
 ├── print_rule()      # Rich Rule (separator between cycles)
-└── print_break()     # "────" (separator inside timing summary)
+├── print_break()     # "────" (separator inside timing summary)
+└── spinner()         # context manager: animated ⠋ (transient, auto-cleared)
 ```
 
 ### Error handling
@@ -162,16 +164,30 @@ Two layers:
 
 ### Ollama auto-start
 
-`_ensure_ollama()` runs once at startup, before the banner, so the
-hotkey is ready immediately.  It shows a dim "检查 Ollama……" message
-while probing `GET {VLM_OLLAMA_URL}/api/tags`:
+`_ensure_ollama()` runs once at startup, wrapped in a ``spinner()``
+context manager so the user sees an animated indicator during the
+check.  After the spinner exits (line cleared), a status line is
+printed — matching the same pattern used for ``vlm analyze``:
+
+.. code:: python
+
+    with spinner("checking Ollama"):
+        ok = _ensure_ollama(VLM_OLLAMA_URL)
+    if ok:
+        print_ok("ollama reachable")
+    else:
+        print_warn(f"ollama unreachable ({VLM_OLLAMA_URL})")
+
+``_ensure_ollama()`` probes ``GET {VLM_OLLAMA_URL}/api/tags``:
 
 1. **Reachable** (2 s timeout) → return ``True``.
-2. **Not reachable** → launch `ollama serve` (hidden, ``CREATE_NO_WINDOW``).
+2. **Not reachable** → launch ``ollama serve`` (hidden, ``CREATE_NO_WINDOW``).
 3. Poll every 500 ms for up to 4 s → if reachable now, return ``True``.
-4. Otherwise return ``False`` — a yellow warning with manual-start
-   hint appears (before the banner, so the user sees it).  The tool
-   does **not** block; the user can start Ollama manually and continue.
+4. Otherwise return ``False``.
+
+The tool does **not** block on a failure; a tip suggests manually
+starting ``ollama serve`` and the banner is shown so the user can
+retry at any time.
 
 ### Hotkey system
 
