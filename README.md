@@ -9,7 +9,7 @@ Take a screenshot, let a VLM identify it directly, and export to XLSX.
 Double-click `run.bat`, or:
 
 ```bash
-cd D:\PythonDirectory\tablesnap
+cd path\to\tablesnap
 uv run python main.py
 ```
 

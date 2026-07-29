@@ -9,7 +9,7 @@
 双击 `run.bat`，或：
 
 ```bash
-cd D:\PythonDirectory\tablesnap
+cd path\to\tablesnap
 uv run python main.py
 ```
 
