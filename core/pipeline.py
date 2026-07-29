@@ -1,6 +1,8 @@
 """Workflow orchestration — ties capture, VLM analysis, and export together."""
 
+import subprocess
 import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -39,13 +41,24 @@ def _xlsx_shape(path: str) -> str:
     return "?"
 
 
+def _file_href(path_str: str) -> str:
+    """Return path as-is; drive-letter paths are clickable in Warp and most terminals."""
+    return path_str
+
+
 def process_screenshot() -> None:
     """1. Capture region → 2. VLM analyze → 3. Export to XLSX."""
     try:
         # -- Step 1: Capture --
         print(f"  [{'capture'.center(18)}]")
         t_cap = time.perf_counter()
-        image_path = capture_region()
+        try:
+            image_path = capture_region()
+        except Exception as exc:
+            _log_stage("capture", time.perf_counter() - t_cap)
+            console.print(f"  [red]capture failed:[/red] {exc}")
+            console.print("       [dim]→ Check display / permissions, then try again[/dim]")
+            return
         t_cap = time.perf_counter() - t_cap
 
         if image_path is None:
@@ -88,17 +101,55 @@ def process_screenshot() -> None:
             if "```" in psv_text:
                 extras.append("fenced")
             hint = f"  ({shape})" + (f"  [{', '.join(extras)}]" if extras else "")
-            console.print(f"\n  [green]  {xlsx_path}  {hint}[/green]")
+            href = _file_href(xlsx_path)
+            console.print(f"\n  [green]  {href}  {hint}[/green]")
         elif raw_stripped == "NO_TABLE":
             console.print("\n  [yellow]no table detected in the selected region[/yellow]")
             console.print("       [dim]→ Make sure the area has a table with column headers[/dim]")
         elif raw_stripped.startswith("ERROR:"):
             console.print(f"\n  [red]{raw_stripped}[/red]")
-    except ValueError as exc:
-        console.print(f"\n  [yellow]VLM returned no recognizable table data[/yellow]")
-        console.print(f"       [dim]→ Select a region that contains a table with column headers[/dim]")
+    except ValueError:
+        console.print("\n  [yellow]VLM returned unparseable output[/yellow]")
+        console.print("       [dim]→ Try again, or check Ollama model status[/dim]")
     except Exception as exc:
-        console.print(f"\n  [red]error:[/red] {exc}")
+        console.print(f"\n  [red]unexpected error:[/red] {exc}")
+        console.print("       [dim]→ If this persists, check the logs[/dim]")
+
+
+def _ensure_ollama(url: str, wait: int = 4) -> bool:
+    """Check Ollama reachability; auto-start if missing.
+
+    Returns True if API is reachable within *wait* seconds.
+    """
+    # Already reachable?
+    try:
+        req = urllib.request.Request(f"{url}/api/tags")
+        urllib.request.urlopen(req, timeout=2)
+        return True
+    except Exception:
+        pass
+
+    # Try to start Ollama server in background (no console window)
+    try:
+        subprocess.Popen(
+            ["ollama", "serve"],
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+        )
+    except Exception:
+        return False
+
+    for _ in range(wait * 2):
+        time.sleep(0.5)
+        try:
+            req = urllib.request.Request(f"{url}/api/tags")
+            urllib.request.urlopen(req, timeout=1)
+            return True
+        except Exception:
+            continue
+    return False
 
 
 def main_loop() -> None:
@@ -120,6 +171,11 @@ def main_loop() -> None:
     console.print(panel)
 
     try:
+        if not _ensure_ollama(VLM_OLLAMA_URL):
+            console.print("  [yellow]Ollama not detected at " + VLM_OLLAMA_URL + "[/yellow]")
+            console.print("       [dim]→ Auto-launch failed. Start manually:  ollama serve[/dim]")
+            console.print()
+
         while True:
             wait_for_hotkey(HOTKEY)
             time.sleep(DEBOUNCE)

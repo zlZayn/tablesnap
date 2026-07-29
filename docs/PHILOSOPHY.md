@@ -1,47 +1,47 @@
-# 设计哲学
+# Design Philosophy
 
-## 调试是为了通用性
+## Debugging for Generality
 
-每次调试都在回答同一个问题：**这个变化能让所有图都变好吗？**
+Every debug session answers the same question: **does this change make all images better?**
 
-如果答案是"只能修这一张"——那方向错了。修一张图的 bug 用 regex 打补丁最快，但补丁叠补丁只会让系统越来越脆弱。每一条额外规则都是新的边缘情况。
+If the answer is "only fixes this one image" — the direction is wrong. Patching one image with regex is fast but adds a new edge case that will surface elsewhere. Every extra rule is more to maintain.
 
-正确的做法很反直觉：**回到 prompt 层面，让模型理解得更准，而不是帮它擦屁股。**
+The correct approach — counter-intuitive at first — is to **go back to the prompt** and make the model understand better rather than cleaning up after it.
 
-## VLM 管线：AI 是理解者，不是格式化程序
+## VLM Pipeline: AI as Reader, Not Formatter
 
-PSV 提取管线的核心假设：
+The PSV extraction pipeline rests on one assumption:
 
-- VLM 有视觉理解能力，也能理解"列"的概念。告诉它要做什么，它就能做对。
-- 不要教它"怎么格式化"——引号规则、转义约定、正则清理——那是教它干不擅长的事。
-- 一个理解数据的模型输出的分隔符自然是对的。一个不理解数据加再多规则也救不了。
+The VLM can *see* the table. It understands "columns" as easily as a human does. Telling it what to do is enough — it will do it correctly.
 
-### 这意味着什么
+Do not teach it *how to format* — quoting rules, escaping conventions, regex cleanup. Those are things the model is not good at. A model that understands the data will produce correct delimiters on its own. A model that doesn't understand the data won't be saved by more rules.
 
-| 场景 | 坏做法 | 好做法 |
-|---|---|---|
-| data_05 引号不配对 | 加 regex 检测接清洗 | 去掉引号规则，让模型只按 pipe 分隔 |
-| 字段数不对齐 | 加字段补齐逻辑 | prompt 强调每行列数一致 |
-| 多了一行噪音 | 加过滤规则 | prompt 强调"只输出表格数据" |
+### What This Means in Practice
 
-所有的好做法都是一个方向：**让 prompt 更清晰，让模型理解更准确。** 调试工作应该在 prompt 层面完成，而不是在 parsing 层面。
+| Scenario | Wrong approach | Right approach |
+| :--- | :--- | :--- |
+| Quoted cells mis-paired | Add regex to detect and clean | Remove quoting rule, let model use pipe-only delimiters |
+| Column count misaligned   | Add column-fill logic              | Prompt: strictly require equal columns per row |
+| Extra noise rows          | Add filtering rule                 | Prompt: strictly require only table rows |
 
-## 为什么这不是理想主义
+Every right approach is the same direction: **a clearer prompt and a model trained to understand, not a post-processing layer for syntax errors.**
 
-三个理由，全是实用的：
+## Why This Is Not Idealism
 
-1. **regex 每多一条就多一个隐藏 bug。** 你今天修的边缘情况，明天换个图片格式又冒出来了。prompt 修好了就是修好了。
-2. **prompt 改进对所有图片生效。** 一条更好的规则让 6 张图、60 张图、600 张图同时受益。regex 补丁只覆盖你写了条件的那张。
-3. **VLM 在变好。** 更好的模型理解力更强，prompt 的收益会越来越大。regex 的收益是固定的，模型升级不会让 regex 变聪明。
+Three practical reasons — not philosophical:
 
-## 边界
+1. **Every regex is a hidden bug.** The edge case you fix today reappears tomorrow with a different image format. A prompt fix, once right, is done.
+2. **Prompt improvements benefit all images.** One better rule improves 6 images, 60 images, 600 images simultaneously. A regex patch covers only the case you wrote a condition for.
+3. **VLMs are getting better.** Stronger models mean better comprehension, and prompt improvements compound over time. Regex benefits are fixed; model upgrades don't make regex smarter.
 
-这个哲学不是绝对的。如果某个问题**不可能**通过 prompt 解决——比如 VLM 输出本身就在语法上无法解析——就需要在 parsing 层兜底。但：
+## Boundary
 
-- 兜底必须是通用的（不对特定图片写条件）
-- 兜底必须是简单的（strip、split，不涉及语义判断）
-- 兜底之后必须回头改进 prompt，目标是移除这个兜底
+This philosophy is not absolute. If a problem is impossible to solve at the prompt level — for example, the VLM output is syntactically unparseable — a fallback is needed. But:
 
-## 一句话
+- The fallback must be **generic** (no conditions keyed to specific images)
+- The fallback must be **simple** (strip, split — no semantic reasoning)
+- After adding a fallback, revisit the prompt with the goal of removing it
 
-**代码层面的"修复"是承认 prompt 失败。prompt 层面的改进才是真正的调试。**
+## One Line
+
+**"Fixes" at the code level are an admission of prompt failure. Prompt-level improvements are real debugging.**
