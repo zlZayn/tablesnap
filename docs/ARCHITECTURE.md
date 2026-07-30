@@ -242,7 +242,7 @@ Three files, each with a distinct scope:
 | :--- | :--- | :--- |
 | `tests/test_vlm.py` | `OllamaClient.analyze()` with mocked urllib | No |
 | `tests/test_xlsx.py` | `psv_to_xlsx()` PSV parsing + export | No |
-| `tests/test_end_to_end.py` | Full pipeline on 6 sample images | Yes |
+| `tests/test_end_to_end.py` | Full pipeline on 5 sample images | Yes |
 | `tests/read_xlsx.py` | Standalone debug tool: dump XLSX rows | No |
 
 The E2E tests (`test_end_to_end.py`) run every image in
@@ -274,9 +274,16 @@ tablesnap/
 │   ├── __init__.py
 │   └── xlsx.py              # psv_to_xlsx + export_to_xlsx
 ├── tests/
+│   ├── __init__.py
 │   ├── test_vlm.py          # mocked VLM client tests
 │   ├── test_xlsx.py         # PSV parsing tests
 │   ├── test_end_to_end.py   # integration test on sample images
-│   └── read_xlsx.py         # debug tool
+│   ├── read_xlsx.py         # debug tool
+│   └── test_table_pics/     # 5 sample table images (139 KB compressed)
+│       ├── test_data_01.png
+│       ├── test_data_02.png
+│       ├── test_data_03.png
+│       ├── test_data_04.png
+│       └── test_data_05.png
 └── results/                 # output XLSX directory
 ```
