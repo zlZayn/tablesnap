@@ -6,7 +6,7 @@ Take a screenshot, let a VLM identify it directly, and export to XLSX.
 
 ## Quick start
 
-Double-click `run.bat`, or:
+Double-click `Launch Tablesnap Tool.cmd`, or:
 
 ```bash
 cd path\to\tablesnap

@@ -110,7 +110,7 @@
 
 ## Step 7 — 跑一次
 
-告诉用户双击 `run.bat`，按 `Ctrl+Alt+S` 截张表。
+告诉用户双击 `Launch Tablesnap Tool.cmd`，按 `Ctrl+Alt+S` 截张表。
 
 - XLSX 文件生成在项目目录下的 `results/` 文件夹里，文件名带时间戳
 - 关掉黑窗口就退出程序

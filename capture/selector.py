@@ -15,7 +15,17 @@ import keyboard
 from PIL import Image, ImageTk
 
 from capture.screen import capture_screen, save_temp
-from core.config import COLOR, DASH, DIM_ALPHA, LINE_W, MIN_SIZE
+from core.config import (
+    BORDER_COLOR,
+    COLOR,
+    CORNER_SIZE,
+    DIM_ALPHA,
+    LABEL_COLOR,
+    LABEL_FONT,
+    LABEL_OFFSET,
+    LINE_W,
+    MIN_SIZE,
+)
 
 
 class RegionSelector:
@@ -32,9 +42,11 @@ class RegionSelector:
     def __init__(self, background: Image.Image) -> None:
         self._bg = background
         self._result: tuple[int, int, int, int] | None = None
-        self._rect_id: int | None = None
         self._hl_id: int | None = None        # "highlight" image item
         self._hl_photo: ImageTk.PhotoImage | None = None
+        self._corner_ids: list[int] = []      # corner-marker item ids
+        self._line_ids: list[int] = []        # border line item ids
+        self._text_id: int | None = None      # dimension label item id
         self._sx: int | None = None
         self._sy: int | None = None
 
@@ -82,29 +94,75 @@ class RegionSelector:
         """Called from the keyboard hook thread; schedule quit in the GUI thread."""
         self._root.after(0, self._on_cancel)
 
+    # -- helpers ----------------------------------------------------------
+
+    def _clear_overlay(self) -> None:
+        """Remove all dynamically drawn overlay items."""
+        for item_id in self._corner_ids:
+            self._canvas.delete(item_id)
+        for item_id in self._line_ids:
+            self._canvas.delete(item_id)
+        if self._text_id is not None:
+            self._canvas.delete(self._text_id)
+            self._text_id = None
+        self._corner_ids = []
+        self._line_ids = []
+
     # -- event handlers ---------------------------------------------------
 
     def _on_press(self, event: tk.Event) -> None:
         self._sx, self._sy = event.x, event.y
-        if self._rect_id is not None:
-            self._canvas.delete(self._rect_id)
+        self._clear_overlay()
 
     def _on_drag(self, event: tk.Event) -> None:
         assert self._sx is not None and self._sy is not None
-        # -- Draw the dashed outline --
-        if self._rect_id is not None:
-            self._canvas.delete(self._rect_id)
-        self._rect_id = self._canvas.create_rectangle(
-            self._sx, self._sy, event.x, event.y,
-            outline=COLOR, width=LINE_W, dash=DASH,
-        )
+        self._clear_overlay()
 
-        # -- Overlay the ORIGINAL (non-dimmed) pixels on the selection --
         x0, y0 = self._sx, self._sy
         x1, y1 = event.x, event.y
         left, top = min(x0, x1), min(y0, y1)
         right, bottom = max(x0, x1), max(y0, y1)
 
+        # -- Thin border lines --
+        cs = CORNER_SIZE
+        self._line_ids = [
+            self._canvas.create_line(left, top, right, top,
+                                     fill=BORDER_COLOR, width=LINE_W),
+            self._canvas.create_line(right, top, right, bottom,
+                                     fill=BORDER_COLOR, width=LINE_W),
+            self._canvas.create_line(right, bottom, left, bottom,
+                                     fill=BORDER_COLOR, width=LINE_W),
+            self._canvas.create_line(left, bottom, left, top,
+                                     fill=BORDER_COLOR, width=LINE_W),
+        ]
+
+        # -- Corner markers (cyan squares) --
+        self._corner_ids = [
+            self._canvas.create_rectangle(
+                left - cs, top - cs, left + cs, top + cs,
+                fill=COLOR, outline=""),
+            self._canvas.create_rectangle(
+                right - cs, top - cs, right + cs, top + cs,
+                fill=COLOR, outline=""),
+            self._canvas.create_rectangle(
+                right - cs, bottom - cs, right + cs, bottom + cs,
+                fill=COLOR, outline=""),
+            self._canvas.create_rectangle(
+                left - cs, bottom - cs, left + cs, bottom + cs,
+                fill=COLOR, outline=""),
+        ]
+
+        # -- Dimension label --
+        self._text_id = self._canvas.create_text(
+            right, bottom + LABEL_OFFSET,
+            text=f"{right-left} x {bottom-top}",
+            fill=LABEL_COLOR,
+            font=LABEL_FONT,
+            anchor="n",
+        )
+
+        # -- Highlight: show the original (non-dimmed) pixels inside the
+        #    selection area --
         region = self._bg.crop((left, top, right, bottom))
         self._hl_photo = ImageTk.PhotoImage(region)
 

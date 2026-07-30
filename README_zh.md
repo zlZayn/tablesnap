@@ -6,7 +6,7 @@
 
 ## 快速开始
 
-双击 `run.bat`，或：
+双击 `Launch Tablesnap Tool.cmd`，或：
 
 ```bash
 cd path\to\tablesnap

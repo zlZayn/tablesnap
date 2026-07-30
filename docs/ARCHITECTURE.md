@@ -11,7 +11,7 @@ prompt (`docs/PHILOSOPHY.md`).
 ## Runtime flow
 
 ```
-run.bat → uv run python main.py → main_loop()
+Launch Tablesnap Tool.cmd → uv run python main.py → main_loop()
 
 main_loop():
     1. spinner("checking Ollama")    # animated → cleared; result on next line
@@ -51,9 +51,16 @@ Key numbers (from `core/config.py`):
 | :--- | :--- | :--- |
 | `DIM_ALPHA` | 0.3 | Background dimming level |
 | `MIN_SIZE` | 10 px | Minimum selection width/height |
-| `COLOR` | `#FF4444` | Selection rectangle colour |
-| `LINE_W` | 2 px | Selection rectangle border width |
-| `DASH` | `(4,2)` | Rectangle dash pattern |
+| `COLOR` | `#00BCD4` | Corner-marker accent colour |
+| `BORDER_COLOR` | `#666666` | Thin border line colour |
+| `CORNER_SIZE` | 5 px | Corner-marker half-size |
+| `LINE_W` | 1 px | Border line width |
+| `LABEL_COLOR` | `#CCCCCC` | Dimension text colour |
+| `LABEL_FONT` | `("Segoe UI", 10)` | Dimension text font |
+| `LABEL_OFFSET` | 18 px | Gap between selection edge and label |
+
+A dimension label (`W x H`) sits below the selection at its
+bottom-right corner.
 
 Cancel is handled by `<Escape>` (returns `None`) and `MIN_SIZE` check
 (selections < 10 px are rejected).  A global Escape hook (registered via
@@ -209,8 +216,9 @@ everything on one thread with no synchronization needed.
 `main.py` (11 lines): imports `main_loop` from `core.pipeline` and
 calls it under `if __name__ == "__main__"`.
 
-`run.bat` runs `uv run python main.py` and uses `exit /b` (not
-`pause`) so Ctrl+C exits cleanly without a "终止批处理操作吗" prompt.
+`Launch Tablesnap Tool.cmd` runs `uv run python main.py` and uses
+`exit /b` (not `pause`) so Ctrl+C exits cleanly without a
+"终止批处理操作吗" prompt.
 
 ## Dependencies
 
@@ -246,7 +254,7 @@ and write a `_report.json` for reproducible `--show` mode.
 ```
 tablesnap/
 ├── main.py                  # entry point
-├── run.bat                  # launcher (exit /b)
+├── Launch Tablesnap Tool.cmd  # launcher (exit /b)
 ├── pyproject.toml           # project config + dependencies
 ├── core/
 │   ├── __init__.py          # docstring only

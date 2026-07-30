@@ -23,11 +23,17 @@ POLL_INTERVAL  = 0.05   # seconds between key-state checks
 # ---------------------------------------------------------------------------
 # Region selection overlay
 # ---------------------------------------------------------------------------
-DIM_ALPHA  = 0.3          # dimming level for overlay
-MIN_SIZE   = 10            # minimum selection width/height (px)
-DASH       = (4, 2)        # selection-rectangle dash pattern
-COLOR      = "#FF4444"     # selection-rectangle colour
-LINE_W     = 2             # selection-rectangle line width
+DIM_ALPHA    = 0.3          # dimming level for overlay
+MIN_SIZE     = 10            # minimum selection width/height (px)
+COLOR        = "#00BCD4"     # accent colour for corner markers
+BORDER_COLOR = "#666666"     # thin border line colour
+CORNER_SIZE  = 5             # half-size of corner markers (px)
+LINE_W       = 1             # border line width (px)
+
+# Dimension label on selection overlay
+LABEL_COLOR  = "#CCCCCC"          # dimension text colour
+LABEL_FONT   = ("Segoe UI", 10)   # dimension text font
+LABEL_OFFSET = 18                 # px gap between selection edge and text
 
 # ---------------------------------------------------------------------------
 # VLM (Vision Language Model)
