@@ -16,6 +16,14 @@ import time
 import json
 from pathlib import Path
 
+# Ensure project root AND tests dir are on sys.path before any local imports
+_proj_root = Path(__file__).resolve().parent.parent
+_tests_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(_proj_root))
+sys.path.insert(0, str(_tests_dir))
+
+from tests.read_xlsx import xlsx_shape, print_xlsx_rows
+
 # Force UTF-8 for terminal display (Chinese filenames / content)
 try:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -25,26 +33,14 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TEST_IMAGES  = PROJECT_ROOT / "tests" / "test_table_pics"
-TEST_OUTPUT  = PROJECT_ROOT / "tests" / "test_output"
+PROJECT_ROOT = _proj_root
 
-sys.path.insert(0, str(PROJECT_ROOT))
+from core.config import TEST_IMAGES, TEST_OUTPUT
 
 
 # ===================================================================
 #  Display helpers
 # ===================================================================
-
-def _display_xlsx(ws, max_rows: int = 30) -> None:
-    """Print an openpyxl worksheet as rows of lists."""
-    for row in ws.iter_rows(
-        min_row=1,
-        max_row=min(ws.max_row or 0, max_rows),
-        values_only=True,
-    ):
-        print(f"  {list(row)}")
-
 
 def _display_report(entries: list[dict]) -> None:
     """Pretty-print a saved test report (from _report.json)."""
@@ -61,7 +57,7 @@ def _display_report(entries: list[dict]) -> None:
                 print(f"  VLM: {entry['vlm_time_s']}s  "
                       f"| XLSX: {ws.max_row}r x {ws.max_column}c"
                       f"  | PSV len: {entry.get('psv_len', entry.get('csv_len', '?'))}")
-                _display_xlsx(ws)
+                print_xlsx_rows(ws)
         else:
             print(f"  STATUS: {status}", end="")
             if entry.get("error"):
@@ -148,27 +144,14 @@ def run_one(image_path: Path) -> dict:
     return result
 
 
-def _xlsx_shape(xlsx_path: str) -> str:
-    """Return 'rowsxcols' string for a given XLSX file."""
-    from openpyxl import load_workbook
-    try:
-        wb = load_workbook(xlsx_path)
-        ws = wb.active
-        if ws is not None:
-            return f"{ws.max_row}x{ws.max_column}"
-        return "?"
-    except Exception:
-        return "?"
-
-
 def _clean_output() -> None:
-    """Remove old XLSX files from test output to avoid accumulation."""
+    """Remove old XLSX and JSON files from test output."""
     count = 0
-    for f in TEST_OUTPUT.glob("*.xlsx"):
+    for f in list(TEST_OUTPUT.glob("*.xlsx")) + list(TEST_OUTPUT.glob("*.json")):
         f.unlink()
         count += 1
     if count:
-        print(f"(cleaned {count} stale .xlsx files)\n")
+        print(f"(cleaned {count} stale files)\n")
 
 
 def run_all() -> list[dict]:
@@ -190,7 +173,7 @@ def run_all() -> list[dict]:
 
     for img in images:
         r = run_one(img)
-        rows_str = _xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
+        rows_str = xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
         _print_row(r, rows_str)
         results.append(r)
 
@@ -252,7 +235,7 @@ def main():
                 print(f"Image not found: {img_path}")
                 return
             r = run_one(img_path)
-            rows_str = _xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
+            rows_str = xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
             _print_header()
             _print_row(r, rows_str)
             print()
@@ -262,7 +245,7 @@ def main():
                 wb = load_workbook(r["xlsx_path"])
                 ws = wb.active
                 if ws is not None:
-                    _display_xlsx(ws)
+                    print_xlsx_rows(ws)
         return
 
     if "--dump" in args:
@@ -305,8 +288,44 @@ def main():
                 print()
         return
 
-    # Default: run all
-    run_all()
+    # Default: run all with dump
+    results = run_all()
+    print()
+    for r in results:
+        print(f"=== {r['image']} ===")
+        print(f"  status: {r['status']}")
+        if r["vlm_time_s"]:
+            print(f"  vlm:    {r['vlm_time_s']}s")
+        print()
+
+        # Print raw VLM output
+        raw = r.get("psv_raw", "")
+        if raw:
+            print("  --- VLM raw output ---")
+            for line in raw.splitlines():
+                print(f"  |{line}")
+            print("  ---")
+        print()
+
+        # Print XLSX content
+        if r["status"] == "ok" and r["xlsx_path"]:
+            xp = r["xlsx_path"]
+            print(f"  --- XLSX ({xp}) ---")
+            from openpyxl import load_workbook
+            wb = load_workbook(xp)
+            ws = wb.active
+            if ws is not None:
+                print(f"  sheet: {ws.title}  ({ws.max_row}r x {ws.max_column}c)")
+                for row in ws.iter_rows(
+                    min_row=1,
+                    max_row=min(ws.max_row or 0, 30),
+                    values_only=True,
+                ):
+                    print(f"    {list(row)}")
+            print()
+        elif r.get("error"):
+            print(f"  error: {r['error']}")
+            print()
 
 
 if __name__ == "__main__":

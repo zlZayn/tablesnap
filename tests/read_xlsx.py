@@ -11,6 +11,37 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 
+def xlsx_shape(xlsx_path: str) -> str:
+    """Return 'rowsxcols' string for a given XLSX file."""
+    try:
+        wb = load_workbook(xlsx_path)
+        ws = wb.active
+        if ws is not None:
+            return f"{ws.max_row}x{ws.max_column}"
+        return "?"
+    except Exception:
+        return "?"
+
+
+def print_xlsx_rows(ws, max_rows: int = 30) -> None:
+    """Print worksheet rows as lists (reusable, no header)."""
+    for row in ws.iter_rows(
+        min_row=1,
+        max_row=min(ws.max_row or 0, max_rows),
+        values_only=True,
+    ):
+        values = []
+        for v in row:
+            if v is None:
+                values.append("")
+            else:
+                s = str(v)
+                if len(s) > 60:
+                    s = s[:57] + "..."
+                values.append(s)
+        print(f"  {values}")
+
+
 def dump_xlsx(xlsx_path: str, max_rows: int | None = None) -> None:
     """Print an openpyxl workbook as rows of lists."""
     wb = load_workbook(xlsx_path)
@@ -27,18 +58,7 @@ def dump_xlsx(xlsx_path: str, max_rows: int | None = None) -> None:
     print(f"Sheet: {ws.title}  ({nrows}r x {ncols}c)")
     print()
 
-    for row in ws.iter_rows(min_row=1, max_row=limit, values_only=True):
-        values = []
-        for v in row:
-            if v is None:
-                values.append("")
-            else:
-                s = str(v)
-                # Truncate long strings for readability
-                if len(s) > 60:
-                    s = s[:57] + "..."
-                values.append(s)
-        print(f"  {values}")
+    print_xlsx_rows(ws, max_rows=limit)
 
     if max_rows is not None and nrows > max_rows:
         print(f"  ... ({nrows - max_rows} rows hidden)")

@@ -92,9 +92,9 @@ built in `_build_request_body()`:
 
 Two prompts drive the model — defined in `vlm/prompts.py`:
 - **SYSTEM_PROMPT**: role ("precise data-extraction assistant"),
-  format rules (raw PSV, no markdown, no fences, pipe delimiter,
-  equal columns, headers first row, empty cells blank, no quoting
-  except when a cell contains `|`), and the `NO_TABLE` escape hatch.
+  format rules (pipe | between columns, no pipe at row start/end,
+  copy every cell exactly, include ALL visible data, skip dash-only
+  rows, `NO_TABLE` escape hatch), and a concrete PSV example.
 - **USER_PROMPT**: short reminder to extract tabular data as PSV.
 
 Possible return values:
@@ -247,7 +247,9 @@ Three files, each with a distinct scope:
 
 The E2E tests (`test_end_to_end.py`) run every image in
 `tests/test_table_pics/`, save results to `tests/test_output/`,
-and write a `_report.json` for reproducible `--show` mode.
+and write a `_report.json`.  Default mode is **dump** — always shows
+VLM raw output side-by-side with XLSX content for comparison.
+Running cleans stale `.xlsx` and `.json` files first.
 
 ## Project file map
 
