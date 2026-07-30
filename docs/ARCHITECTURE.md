@@ -113,8 +113,10 @@ empty lines are dropped, and each line is parsed by `csv.reader` with
 
 `export_to_xlsx()` writes the parsed rows to a timestamped `.xlsx` file
 under `config.OUTPUT_DIR` (`results/` by default).  Column widths are
-autofitted to the longest cell value (capped at 50 characters;
-`MergedCell` objects are skipped to avoid openpyxl errors).
+autofitted to the longest cell value (CJK-aware: full-width chars are
+counted as 2 via `unicodedata.east_asian_width`; capped at 50
+characters; `MergedCell` objects are skipped to avoid openpyxl
+errors).
 
 If `psv_to_xlsx()` receives empty text after cleaning, it raises
 `ValueError` — the pipeline catches this in the export-stage

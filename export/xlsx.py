@@ -2,6 +2,7 @@
 
 import csv
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,19 @@ _HIGHLIGHT_FILL = PatternFill(
 )
 
 
+def display_width(text: str) -> int:
+    """Estimate the rendered width of *text* in a monospace font.
+
+    Full-width characters (Chinese, Japanese, Korean, etc.) are counted as
+    2 units; everything else (Latin, digits, punctuation) as 1.
+    """
+    width = 0
+    for ch in text:
+        eaw = unicodedata.east_asian_width(ch)
+        width += 2 if eaw in ("W", "F") else 1
+    return width
+
+
 def export_to_xlsx(
     data: list[list[str]],
     output_dir: str | None = None,
@@ -24,8 +38,8 @@ def export_to_xlsx(
     """Export a 2-D grid of text data to an XLSX file.
 
     Creates a timestamped ``.xlsx`` file under *output_dir* (defaults to
-    ``config.OUTPUT_DIR``).  Column widths are auto-fitted with a 50-char
-    cap.
+    ``config.OUTPUT_DIR``).  Column widths are auto-fitted with a CJK-aware
+    calculation (full-width chars count as 2) and a 50-char cap.
 
     Args:
         data:           2-D list where ``data[row][col]`` is the cell text.
@@ -65,7 +79,7 @@ def export_to_xlsx(
             if (row_idx - 1) in highlight:
                 cell.fill = _HIGHLIGHT_FILL
 
-    # Auto-fit column widths (skip MergedCell entries)
+    # Auto-fit column widths (CJK-aware, skip MergedCell entries)
     for column_cells in ws.columns:
         max_length = 0
         first = column_cells[0]
@@ -76,7 +90,7 @@ def export_to_xlsx(
             if isinstance(cell, MergedCell):
                 continue
             if cell.value is not None:
-                max_length = max(max_length, len(str(cell.value)))
+                max_length = max(max_length, display_width(str(cell.value)))
         ws.column_dimensions[col_letter].width = min(max_length + 2, 50)
 
     wb.save(str(filepath))
