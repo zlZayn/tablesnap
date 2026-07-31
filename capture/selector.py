@@ -6,7 +6,8 @@ select the region of interest.
 Usage::
 
     from capture.selector import capture_region
-    path = capture_region()          # str | None  (None == cancelled)
+    path = capture_region()              # str | None  (None == cancelled)
+    path = capture_region(timestamp=ts)  # with shared timestamp
 """
 
 import tkinter as tk
@@ -191,12 +192,16 @@ class RegionSelector:
         self._root.quit()
 
 
-def capture_region() -> str | None:
+def capture_region(timestamp: str | None = None) -> str | None:
     """Full-screen snapshot -> user selects region -> return cropped path.
 
     1. Captures the entire primary monitor.
     2. Shows a dimmed overlay where the user drags a rectangle.
-    3. Crops to that rectangle and saves to a temp PNG file.
+    3. Crops to that rectangle and saves to a PNG under ``CAPTURES_DIR``.
+
+    Args:
+        timestamp: Optional pre-generated timestamp for the filename.
+                   When ``None`` a new one is generated from the current time.
 
     Returns:
         Absolute path to the cropped image, or ``None`` if cancelled.
@@ -209,4 +214,4 @@ def capture_region() -> str | None:
         return None
 
     cropped = full.crop(region)
-    return save_temp(cropped)
+    return save_temp(cropped, timestamp=timestamp)

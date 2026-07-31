@@ -3,6 +3,7 @@
 import subprocess
 import time
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -55,8 +56,10 @@ def process_screenshot() -> None:
         # -- Step 1: Capture --
         print_stage("capture")
         t_cap = time.perf_counter()
+        # Generate timestamp once — shared by screenshot and XLSX
+        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         try:
-            image_path = capture_region()
+            image_path = capture_region(timestamp=ts)
         except Exception as exc:
             _log_stage("capture", time.perf_counter() - t_cap)
             print_err(f"capture failed: {exc}")
@@ -92,7 +95,7 @@ def process_screenshot() -> None:
         if raw_stripped.startswith("ERROR:") or raw_stripped == "NO_TABLE":
             xlsx_path = None
         else:
-            xlsx_path = psv_to_xlsx(psv_text)
+            xlsx_path = psv_to_xlsx(psv_text, timestamp=ts)
         t_xport = time.perf_counter() - t_xport
         _log_stage("export", t_xport)
 

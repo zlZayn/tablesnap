@@ -34,6 +34,7 @@ def export_to_xlsx(
     data: list[list[str]],
     output_dir: str | None = None,
     highlight_rows: list[int] | None = None,
+    timestamp: str | None = None,
 ) -> str:
     """Export a 2-D grid of text data to an XLSX file.
 
@@ -45,6 +46,9 @@ def export_to_xlsx(
         data:           2-D list where ``data[row][col]`` is the cell text.
         output_dir:     Override output directory.
         highlight_rows: 0-based row indices to highlight with yellow fill.
+        timestamp:      Optional pre-generated timestamp string (format
+                        ``YYYY-MM-DD_HHMMSS``).  When ``None`` a new one is
+                        generated from the current time.
 
     Returns:
         Absolute path to the generated XLSX file.
@@ -62,8 +66,8 @@ def export_to_xlsx(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    filename = f"{timestamp}.xlsx"
+    ts = timestamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    filename = f"{ts}.xlsx"
     filepath = output_path / filename
 
     wb = Workbook()
@@ -100,6 +104,7 @@ def export_to_xlsx(
 def psv_to_xlsx(
     psv_text: str,
     output_dir: str | None = None,
+    timestamp: str | None = None,
 ) -> str:
     """Parse PSV text from VLM output and export to XLSX.
 
@@ -110,6 +115,8 @@ def psv_to_xlsx(
     Args:
         psv_text:    Raw text returned by the VLM.
         output_dir:  Override output directory (default config.OUTPUT_DIR).
+        timestamp:   Optional pre-generated timestamp string for the
+                     filename.  When ``None`` a new one is generated.
 
     Returns:
         Absolute path to the generated XLSX file.
@@ -131,4 +138,4 @@ def psv_to_xlsx(
         reader = csv.reader([line], delimiter="|")
         parsed.append(next(reader))
 
-    return export_to_xlsx(parsed, output_dir)
+    return export_to_xlsx(parsed, output_dir, timestamp=timestamp)

@@ -18,18 +18,19 @@ main_loop():
     2. print_banner()                # Rich Panel with hotkey, model, output dir
     3. wait_for_hotkey() loop:
          │
-          └─ process_screenshot():            (core/pipeline.py)
-               a) print_stage("capture")       # bold cyan ▸
-               b) capture_region()             (capture/selector.py)
-                  ├─ capture_screen()          (capture/screen.py, mss)
-                  ├─ RegionSelector.show()     # tkinter overlay (blocking)
-                  └─ save_temp(crop)           # temp PNG path
-               c) print_stage("vlm")          # bold cyan ▸
-               d) OllamaClient.analyze()       (vlm/client.py)
-                  └─ POST /api/generate → JSON → PSV text
-               e) print_stage("export")       # bold cyan ▸
-               f) psv_to_xlsx()                (export/xlsx.py)
-                  └─ csv.reader (|) → openpyxl → results/
+           └─ process_screenshot():            (core/pipeline.py)
+                a) ts = datetime.now()         # shared timestamp
+                b) print_stage("capture")       # bold cyan ▸
+                c) capture_region(ts)           (capture/selector.py)
+                   ├─ capture_screen()          (capture/screen.py, mss)
+                   ├─ RegionSelector.show()     # tkinter overlay (blocking)
+                   └─ save_temp(crop, ts)       # PNG under results/captures/
+                d) print_stage("vlm")          # bold cyan ▸
+                e) OllamaClient.analyze()       (vlm/client.py)
+                   └─ POST /api/generate → JSON → PSV text
+                f) print_stage("export")       # bold cyan ▸
+                g) psv_to_xlsx(text, ts)        (export/xlsx.py)
+                   └─ csv.reader (|) → openpyxl → results/{ts}.xlsx
 ```
 
 All on one thread, no background workers, no thread pools, no async.
@@ -38,13 +39,13 @@ All on one thread, no background workers, no thread pools, no async.
 
 ### Stage 1: Capture
 
-**Input:** live screen  →  **Output:** temp PNG path or `None` (cancelled)
+**Input:** live screen  →  **Output:** PNG path under `results/captures/` or `None` (cancelled)
 
 `capture_region()` is the entry point.  It calls `capture_screen()` to
 grab the entire primary monitor, then opens a `RegionSelector` tkinter
 overlay.  The user drags a rectangle — the selected area shows at full
 brightness while the rest stays dimmed.  On release, the region is
-cropped and saved to a timestamped PNG in the OS temp directory.
+cropped and saved to a timestamped PNG under `results/captures/`.
 
 Key numbers (from `core/config.py`):
 | Constant | Value | Meaning |
@@ -116,14 +117,17 @@ has begun.
 VLM wrapped its output in a ` ```psv ``` markdown fence, the content
 inside the fence is extracted.  The text is then split into lines,
 empty lines are dropped, and each line is parsed by `csv.reader` with
-`|` as delimiter.
+`|` as delimiter.  An optional `timestamp` parameter lets the caller
+pass a pre-generated timestamp so the XLSX shares the same filename
+stem as the screenshot PNG.
 
 `export_to_xlsx()` writes the parsed rows to a timestamped `.xlsx` file
-under `config.OUTPUT_DIR` (`results/` by default).  Column widths are
-autofitted to the longest cell value (CJK-aware: full-width chars are
-counted as 2 via `unicodedata.east_asian_width`; capped at 50
-characters; `MergedCell` objects are skipped to avoid openpyxl
-errors).
+under `config.OUTPUT_DIR` (`results/` by default).  If a `timestamp`
+is provided, it is used as the filename stem; otherwise one is
+generated from the current time.  Column widths are autofitted to the
+longest cell value (CJK-aware: full-width chars are counted as 2 via
+`unicodedata.east_asian_width`; capped at 50 characters; `MergedCell`
+objects are skipped to avoid openpyxl errors).
 
 If `psv_to_xlsx()` receives empty text after cleaning, it raises
 `ValueError` — the pipeline catches this in the export-stage
@@ -236,20 +240,22 @@ process.
 
 ## Tests
 
-Three files, each with a distinct scope:
+Four files, each with a distinct scope:
 
 | File | Scope | Needs VLM? |
 | :--- | :--- | :--- |
-| `tests/test_vlm.py` | `OllamaClient.analyze()` with mocked urllib | No |
-| `tests/test_xlsx.py` | `psv_to_xlsx()` PSV parsing + export | No |
+| `tests/test_vlm.py` | `OllamaClient.analyze()` — 6 mocked cases | No |
+| `tests/test_xlsx.py` | `psv_to_xlsx()` — PSV parsing, fence extraction, timestamp | No |
 | `tests/test_end_to_end.py` | Full pipeline on 5 sample images | Yes |
 | `tests/read_xlsx.py` | Standalone debug tool: dump XLSX rows | No |
 
 The E2E tests (`test_end_to_end.py`) run every image in
 `tests/test_table_pics/`, save results to `tests/test_output/`,
-and write a `_report.json`.  Default mode is **dump** — always shows
-VLM raw output side-by-side with XLSX content for comparison.
-Running cleans stale `.xlsx` and `.json` files first.
+and write a `_report.json` (includes `psv_raw` + `xlsx_content`
+snapshots for offline replay).  Default mode is **dump** — shows VLM
+raw output side-by-side with XLSX content.  `--show` replays the last
+report without calling VLM.  Running cleans stale `.xlsx` and `.json`
+files first.
 
 ## Project file map
 
@@ -266,7 +272,7 @@ tablesnap/
 │   └── pipeline.py          # main_loop + process_screenshot + _ensure_ollama
 ├── capture/
 │   ├── __init__.py
-│   ├── screen.py            # mss capture + temp PNG save
+│   ├── screen.py            # mss capture + PNG save to captures/
 │   └── selector.py          # tkinter dimmed overlay + RegionSelector
 ├── vlm/
 │   ├── __init__.py
@@ -288,4 +294,5 @@ tablesnap/
 │       ├── test_data_04.png
 │       └── test_data_05.png
 └── results/                 # output XLSX directory
+    └── captures/            # screenshot PNGs (timestamped, paired with XLSX)
 ```

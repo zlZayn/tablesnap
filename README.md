@@ -13,7 +13,7 @@ cd path\to\tablesnap
 uv run python main.py
 ```
 
-Once started, press ``Ctrl+Alt+S`` to take a screenshot (drag to select an area). The XLSX is saved to the ``results/`` directory automatically.
+Once started, press ``Ctrl+Alt+S`` to take a screenshot (drag to select an area). The XLSX is saved to the ``results/`` directory automatically. Screenshots are stored in ``results/captures/`` paired with the same timestamp.
 
 > Tip: Press ``Esc`` to cancel a selection in progress.
 
@@ -28,7 +28,7 @@ Once started, press ``Ctrl+Alt+S`` to take a screenshot (drag to select an area)
 1. Open the content you want to capture (a stock table, for example).
 2. Press ``Ctrl+Alt+S``.
 3. The screen dims — drag to select the area to identify (the original image is visible inside the selection box). Release to start recognition.
-4. The XLSX file appears in the ``results/`` directory.
+4. The XLSX file appears in the ``results/`` directory. The screenshot is saved to ``results/captures/``.
 
 ## Installation
 
@@ -54,7 +54,7 @@ uv run python -m pytest -v
 uv run python tests/test_end_to_end.py
 ```
 
-Test output goes to `tests/test_output/`; old `.xlsx` files are cleaned before each run.
+Test output goes to `tests/test_output/`; old `.xlsx` and `.json` files are cleaned before each run.
 
 ### Debug tool
 

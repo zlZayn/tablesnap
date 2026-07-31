@@ -5,10 +5,8 @@ VLM pipeline on each one, saving results to ``tests/test_output/`` for
 manual review.
 
 Usage:
-    uv run python tests/test_end_to_end.py             # run all (auto-cleans old xlsx)
-    uv run python tests/test_end_to_end.py --dump      # run all + print XLSX content
-    uv run python tests/test_end_to_end.py --show      # show last results (no VLM)
-    uv run python tests/test_end_to_end.py --image xxx.png  # single image
+    uv run python tests/test_end_to_end.py             # run all (dump mode, auto-cleans old xlsx/json)
+    uv run python tests/test_end_to_end.py --show      # show last results from _report.json (no VLM)
 """
 
 import sys
@@ -47,17 +45,29 @@ def _display_report(entries: list[dict]) -> None:
     for entry in entries:
         print(f"=== {entry['image']} ===")
         status = entry.get("status", "?")
-        if status == "ok" and entry.get("xlsx_path"):
-            # Load the XLSX to show content
-            xp = entry["xlsx_path"]
-            from openpyxl import load_workbook
-            wb = load_workbook(xp)
-            ws = wb.active
-            if ws is not None:
-                print(f"  VLM: {entry['vlm_time_s']}s  "
-                      f"| XLSX: {ws.max_row}r x {ws.max_column}c"
-                      f"  | PSV len: {entry.get('psv_len', entry.get('csv_len', '?'))}")
-                print_xlsx_rows(ws)
+        shape = entry.get("xlsx_shape", "?")
+        vlm_time = entry.get("vlm_time_s")
+        psv_raw = entry.get("psv_raw")
+        xlsx_content = entry.get("xlsx_content")
+
+        if status == "ok":
+            print(f"  VLM: {vlm_time}s  | XLSX: {shape}"
+                  f"  | PSV len: {entry.get('psv_len', '?')}")
+
+            # Print VLM raw output
+            if psv_raw:
+                print("  --- VLM raw output ---")
+                for line in psv_raw.splitlines():
+                    print(f"  |{line}")
+                print("  ---")
+
+            # Print XLSX content from JSON snapshot
+            if xlsx_content:
+                print(f"  --- XLSX ({entry.get('xlsx_path', '?')}) ---")
+                for row in xlsx_content[:30]:
+                    print(f"    {row}")
+                if len(xlsx_content) > 30:
+                    print(f"    ... ({len(xlsx_content) - 30} rows hidden)")
         else:
             print(f"  STATUS: {status}", end="")
             if entry.get("error"):
@@ -128,7 +138,7 @@ def run_one(image_path: Path) -> dict:
         result["psv_len"] = 0
         return result
 
-    result["psv_raw"] = psv_text  # full VLM output for --dump
+    result["psv_raw"] = psv_text  # full VLM output for dump display
     result["psv_len"] = len(psv_text)
 
     try:
@@ -185,8 +195,9 @@ def run_all() -> list[dict]:
 
     # Persist report
     report_path = TEST_OUTPUT / "_report.json"
-    report_data = [
-        {
+    report_data = []
+    for r in results:
+        entry = {
             "image": r["image"],
             "size_bytes": r["size_bytes"],
             "status": r["status"],
@@ -195,8 +206,24 @@ def run_all() -> list[dict]:
             "xlsx_path": r["xlsx_path"],
             "error": r["error"],
         }
-        for r in results
-    ]
+        # Include VLM raw output for dump replay
+        if r.get("psv_raw"):
+            entry["psv_raw"] = r["psv_raw"]
+        # Snapshot XLSX content so --show works without re-loading file
+        if r["xlsx_path"] and r["status"] == "ok":
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(r["xlsx_path"])
+                ws = wb.active
+                if ws is not None:
+                    entry["xlsx_content"] = [
+                        [str(c) if c is not None else "" for c in row]
+                        for row in ws.iter_rows(values_only=True)
+                    ]
+                    entry["xlsx_shape"] = f"{ws.max_row}r x {ws.max_column}c"
+            except Exception:
+                pass
+        report_data.append(entry)
     report_path.write_text(
         json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -224,68 +251,6 @@ def main():
 
     if "--show" in args:
         show_last()
-        return
-
-    if "--image" in args:
-        idx = args.index("--image")
-        if idx + 1 < len(sys.argv):
-            target = sys.argv[idx + 1]
-            img_path = TEST_IMAGES / target
-            if not img_path.exists():
-                print(f"Image not found: {img_path}")
-                return
-            r = run_one(img_path)
-            rows_str = xlsx_shape(r["xlsx_path"]) if r["xlsx_path"] else "-"
-            _print_header()
-            _print_row(r, rows_str)
-            print()
-            # Also print content if success
-            if r["status"] == "ok" and r["xlsx_path"]:
-                from openpyxl import load_workbook
-                wb = load_workbook(r["xlsx_path"])
-                ws = wb.active
-                if ws is not None:
-                    print_xlsx_rows(ws)
-        return
-
-    if "--dump" in args:
-        results = run_all()
-        print()
-        for r in results:
-            print(f"=== {r['image']} ===")
-            print(f"  status: {r['status']}")
-            if r["vlm_time_s"]:
-                print(f"  vlm:    {r['vlm_time_s']}s")
-            print()
-
-            # Print raw VLM output
-            raw = r.get("psv_raw", "")
-            if raw:
-                print("  --- VLM raw output ---")
-                for line in raw.splitlines():
-                    print(f"  |{line}")
-                print("  ---")
-            print()
-
-            # Print XLSX content
-            if r["status"] == "ok" and r["xlsx_path"]:
-                xp = r["xlsx_path"]
-                print(f"  --- XLSX ({xp}) ---")
-                from openpyxl import load_workbook
-                wb = load_workbook(xp)
-                ws = wb.active
-                if ws is not None:
-                    print(f"  sheet: {ws.title}  ({ws.max_row}r x {ws.max_column}c)")
-                    for row in ws.iter_rows(
-                        min_row=1,
-                        max_row=min(ws.max_row or 0, 30),
-                        values_only=True,
-                    ):
-                        print(f"    {list(row)}")
-                print()
-            elif r.get("error"):
-                print(f"  error: {r['error']}")
-                print()
         return
 
     # Default: run all with dump

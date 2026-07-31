@@ -45,6 +45,16 @@ class TestPsvToXlsx(unittest.TestCase):
         with self.assertRaises(ValueError):
             psv_to_xlsx("")
 
+    # ------------------------------------------------------------------
+    # Test 4: custom timestamp produces expected filename
+    # ------------------------------------------------------------------
+    def test_custom_timestamp(self):
+        psv = "A|B\n1|2"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = psv_to_xlsx(psv, output_dir=tmpdir, timestamp="2026-01-01_120000")
+            self.assertTrue(path.endswith("2026-01-01_120000.xlsx"))
+            self.assertTrue(Path(path).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

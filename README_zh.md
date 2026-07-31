@@ -13,7 +13,7 @@ cd path\to\tablesnap
 uv run python main.py
 ```
 
-启动后按 ``Ctrl+Alt+S`` 截图（拖拽选择区域），XLSX 自动保存到项目内 ``results/`` 目录。
+启动后按 ``Ctrl+Alt+S`` 截图（拖拽选择区域），XLSX 自动保存到项目内 ``results/`` 目录。截图保存在 ``results/captures/``，与 XLSX 共用同一时间戳。
 
 > 提示：按下 ``Esc`` 可取消本次截图。
 
@@ -28,7 +28,7 @@ uv run python main.py
 1. 打开需要截图的画面（如股票行情列表）
 2. 按 ``Ctrl+Alt+S``
 3. 屏幕变暗 → 鼠标拖拽框选要识别的区域（框内显示原图）→ 松开自动识别
-4. XLSX 自动出现在 ``results/`` 目录
+4. XLSX 自动出现在 ``results/`` 目录，截图保存在 ``results/captures/``
 
 ## 安装
 
@@ -54,7 +54,7 @@ uv run python -m pytest -v
 uv run python tests/test_end_to_end.py
 ```
 
-测试输出位于 `tests/test_output/`，每次运行前自动清理旧 `.xlsx` 文件。
+测试输出位于 `tests/test_output/`，每次运行前自动清理旧 `.xlsx` 和 `.json` 文件。
 
 ### 调试工具
 
