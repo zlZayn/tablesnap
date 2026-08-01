@@ -93,7 +93,8 @@ characters is unreliable across systems.
 **Input:** PNG image bytes  →  **Output:** PSV text string (or error)
 
 Before the stage begins the pipeline shows ``▸ vlm`` (via
-``print_stage("vlm")``).  The blocking ``client.analyze()`` call is
+``print_stage("vlm")``; the ``▸`` becomes ``>`` on GBK / non-UTF-8
+consoles).  The blocking ``client.analyze()`` call is
 wrapped in a transient spinner (``with spinner("vlm analyzing")``) —
 an animated character rotates on the same line during the 5-20 second
 Ollama call.  The character set is chosen by terminal encoding:
@@ -129,9 +130,9 @@ Possible return values:
 
 **Input:** PSV text  →  **Output:** absolute path to `.xlsx` file
 
-``▸ export`` (via ``print_stage("export")``) appears before the export
-stage so the user sees that capture + analysis succeeded and writing
-has begun.
+``▸ export`` (``>`` on GBK consoles) appears via ``print_stage("export")``
+before the export stage so the user sees that capture + analysis
+succeeded and writing has begun.
 
 `psv_to_xlsx()` (in `export/xlsx.py`) applies one safety net: if the
 VLM wrapped its output in a ` ```psv ``` markdown fence, the content
@@ -199,7 +200,7 @@ output.py
 ├── print_warn()      # yellow (warning)
 ├── print_err()       # red (error)
 ├── print_tip()       # dim + indent + ">" (hint / suggestion)
-├── print_stage()     # bold cyan ▸ (stage header)
+├── print_stage()     # bold cyan ▸ / ">" on GBK (stage header)
 ├── print_timing()    # "label  12.34s" (elapsed time)
 ├── print_rule()      # Rich Rule (separator between cycles; "─" on UTF-8, "-" on GBK)
 ├── print_break()     # "────" (separator inside timing summary)

@@ -72,8 +72,15 @@ def print_tip(msg: str) -> None:
 # ---------------------------------------------------------------------------
 
 def print_stage(label: str) -> None:
-    """Stage header — clearly separated from timing lines."""
-    console.print(f"{PAD}[bold cyan]\u25b8 {label}[/bold cyan]")
+    """Stage header — clearly separated from timing lines.
+
+    Uses an ASCII ">" on GBK / non-UTF-8 consoles where the triangle
+    glyph would crash with a ``UnicodeEncodeError`` (same fallback as
+    ``print_rule`` / ``spinner``).
+    """
+    enc = (sys.stdout.encoding or "").lower()
+    arrow = "\u25b8" if "utf" in enc else ">"
+    console.print(f"{PAD}[bold cyan]{arrow} {label}[/bold cyan]")
 
 def print_timing(label: str, sec: float, detail: str = "") -> None:
     """Timing line: ``label  elapsed  [detail]``."""
