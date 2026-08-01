@@ -1,7 +1,7 @@
 [project]
 name = "tablesnap"
 version = "0.2.0"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "openpyxl>=3.1.0",
     "Pillow>=9.0.0",

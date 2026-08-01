@@ -87,8 +87,14 @@ def print_timing(label: str, sec: float, detail: str = "") -> None:
 # ---------------------------------------------------------------------------
 
 def print_rule() -> None:
-    """Thin rule between capture cycles."""
-    console.print(Rule(style="bright_black"))
+    """Thin rule between capture cycles.
+
+    Uses an ASCII character on GBK / non-UTF-8 consoles where the box
+    drawing character would be mojibake.
+    """
+    enc = (sys.stdout.encoding or "").lower()
+    chars = "─" if "utf" in enc else "-"
+    console.print(Rule(style="bright_black", characters=chars))
 
 def print_break() -> None:
     """Forty-dash break line used inside the timing summary."""
@@ -98,7 +104,17 @@ def print_break() -> None:
 # Loading spinner
 # ---------------------------------------------------------------------------
 
-_SPINNER_CHARS = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+def _spinner_chars() -> tuple[str, ...]:
+    """Braille spinner when the terminal can encode it, ASCII otherwise.
+
+    Some Windows consoles (code page 936 / GBK) cannot encode braille
+    block characters — writing them raises ``UnicodeEncodeError`` in the
+    spinner thread.  Fall back to ASCII so the spinner never crashes.
+    """
+    enc = (sys.stdout.encoding or "").lower()
+    if "utf" in enc:
+        return ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+    return ("-", "\\", "|", "/", "-", "\\", "|", "/", "-", "\\")
 
 
 class _SpinnerState:
@@ -130,7 +146,7 @@ def spinner(text: str):
     """
     state = _SpinnerState()
     stop = threading.Event()
-    chars = itertools.cycle(_SPINNER_CHARS)
+    chars = itertools.cycle(_spinner_chars())
 
     def _spin() -> None:
         while not stop.is_set():

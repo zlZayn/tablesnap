@@ -17,9 +17,41 @@ Once started, press ``Ctrl+Alt+S`` to take a screenshot (drag to select an area)
 
 > Tip: Press ``Esc`` to cancel a selection in progress.
 
+## Batch mode
+
+Convert existing image files to XLSX without the screenshot UI:
+
+```bash
+uv run python main.py file a.png b.jpg
+```
+
+Each image is analysed and exported under ``results/``; a summary reports how many succeeded. Supported extensions: PNG, JPG, JPEG, BMP, TIFF, WEBP.
+
+## Configuration
+
+All tunable parameters live in ``core/config.py``.  They can be overridden without editing the file:
+
+1. **Copy the template, then edit it**: copy ``config.example.json`` (in the project root, committed to git) to ``config.json`` and change any keys you want.  Example: to swap the VLM model and the hotkey, put this in ``config.json``:
+
+   ```json
+   { "VLM_MODEL": "qwen3-vl:2b-instruct", "HOTKEY": "ctrl+alt+x" }
+   ```
+
+2. **Environment variables**: ``TABLESNAP_<CONSTANT>`` (e.g. ``TABLESNAP_VLM_MODEL``).  Overrides ``config.json``.
+
+Precedence: environment variable > ``config.json`` > file default.
+
+Check what is actually in effect at any time:
+
+```bash
+uv run python main.py --print-config
+```
+
+It prints every overridable key with its current value and source (``default`` / ``config.json`` / ``env:TABLESNAP_*``).  ``config.json`` is gitignored — your local settings never get committed.  See ``docs/ARCHITECTURE.md`` for the full key list.
+
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - [Ollama](https://ollama.com/) installed and running
 - VLM model pulled: `ollama pull qwen3-vl:4b-instruct`
 

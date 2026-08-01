@@ -11,7 +11,11 @@ prompt (`docs/PHILOSOPHY.md`).
 ## Runtime flow
 
 ```
-Launch Tablesnap Tool.cmd → uv run python main.py → main_loop()
+Launch Tablesnap Tool.cmd → uv run python main.py → main()
+
+main():  # two modes
+  no args  → main_loop()
+  file ... → _run_batch(image_paths)          # batch mode, no GUI
 
 main_loop():
     1. spinner("checking Ollama")    # animated → cleared; result on next line
@@ -25,13 +29,26 @@ main_loop():
                    ├─ capture_screen()          (capture/screen.py, mss)
                    ├─ RegionSelector.show()     # tkinter overlay (blocking)
                    └─ save_temp(crop, ts)       # PNG under results/captures/
-                d) print_stage("vlm")          # bold cyan ▸
-                e) OllamaClient.analyze()       (vlm/client.py)
-                   └─ POST /api/generate → JSON → PSV text
-                f) print_stage("export")       # bold cyan ▸
-                g) psv_to_xlsx(text, ts)        (export/xlsx.py)
-                   └─ csv.reader (|) → openpyxl → results/{ts}.xlsx
+                d) _analyze_and_export(bytes, ts)  (core/pipeline.py)
+                   ├─ print_stage("vlm")        # bold cyan ▸
+                   ├─ OllamaClient.analyze()    (vlm/client.py)
+                   │    └─ POST /api/generate → JSON → PSV text
+                   ├─ print_stage("export")     # bold cyan ▸
+                   └─ psv_to_xlsx(text, ts)     (export/xlsx.py)
+                        └─ csv.reader (|) → openpyxl → results/{ts}.xlsx
+
+_run_batch(image_paths):
+    for path in image_paths:
+        process_image_file(path)               (core/pipeline.py)
+        ├─ validate: is_file + extension in _IMAGE_EXTS
+        └─ _analyze_and_export(bytes, ts)      # same vlm/export stages
+    → summary "N converted, M failed (T total)"  # exit code 1 if any failed
 ```
+
+The capture stage exists only in the screenshot flow; batch mode feeds
+`_analyze_and_export` directly from image files.  Both flows share the
+VLM + export stages (and the per-stage timings), so the `vlm`/`export`
+behaviour is identical.
 
 All on one thread, no background workers, no thread pools, no async.
 
@@ -78,9 +95,12 @@ characters is unreliable across systems.
 Before the stage begins the pipeline shows ``▸ vlm`` (via
 ``print_stage("vlm")``).  The blocking ``client.analyze()`` call is
 wrapped in a transient spinner (``with spinner("vlm analyzing")``) —
-an animated ``⠋`` rotates on the same line during the 5-20 second
-Ollama call.  The spinner line is removed when the call completes,
-replaced by the timing line.
+an animated character rotates on the same line during the 5-20 second
+Ollama call.  The character set is chosen by terminal encoding:
+braille (``⠋`` and friends) on UTF-8 consoles, ASCII (``-/|\``) on
+GBK / non-UTF-8 consoles, so the spinner never crashes with a
+``UnicodeEncodeError``.  The spinner line is removed when the call
+completes, replaced by the timing line.
 
 `OllamaClient.analyze()` (in `vlm/client.py`) base64-encodes the image
 and POSTs it to `{VLM_OLLAMA_URL}/api/generate` with the request body
@@ -142,6 +162,29 @@ settings, VLM model + URL + temperature + timeout.  One exception:
 the hotkey poll interval (50 ms) is a function default in
 `core/hotkey.py` rather than a config constant.
 
+**External overrides** — any whitelisted constant can be overridden at
+import time without editing the file:
+
+- `config.json` in the project root (keys must be whitelisted)
+- Environment variables `TABLESNAP_<CONSTANT>` (e.g.
+  `TABLESNAP_VLM_MODEL=qwen3-vl:2b-instruct`)
+
+Precedence: **environment variable > config.json > file default.**
+Because the overrides run at module level, `from core.config import X`
+always binds the effective value.
+
+Whitelisted keys (in `_OVERRIDABLE`, with their types): `HOTKEY`,
+`DEBOUNCE`, `DIM_ALPHA`, `MIN_SIZE`, `COLOR`, `BORDER_COLOR`,
+`CORNER_SIZE`, `LINE_W`, `LABEL_COLOR`, `LABEL_OFFSET`, `VLM_MODEL`,
+`VLM_OLLAMA_URL`, `VLM_TIMEOUT`, `VLM_TEMPERATURE`, `VLM_NUM_PREDICT`,
+`OUTPUT_DIR`.  `LABEL_FONT` (a tuple) and the path constants
+(`PROJECT_ROOT`, `TEST_*`) are intentionally excluded.
+
+When `OUTPUT_DIR` is overridden, `CAPTURES_DIR` is recomputed to
+`<output_dir>/captures` automatically.  Invalid values (wrong type,
+unparseable numbers, `None`) are silently ignored and the file default
+stands.
+
 ### Console output
 
 All user-facing output goes through `core/output.py`.  Every
@@ -158,9 +201,9 @@ output.py
 ├── print_tip()       # dim + indent + ">" (hint / suggestion)
 ├── print_stage()     # bold cyan ▸ (stage header)
 ├── print_timing()    # "label  12.34s" (elapsed time)
-├── print_rule()      # Rich Rule (separator between cycles)
+├── print_rule()      # Rich Rule (separator between cycles; "─" on UTF-8, "-" on GBK)
 ├── print_break()     # "────" (separator inside timing summary)
-└── spinner()         # context manager: animated ⠋ (transient, auto-cleared)
+└── spinner()         # context manager: animated (braille on UTF-8, ASCII fallback)
 ```
 
 ### Error handling
@@ -183,14 +226,14 @@ context manager so the user sees an animated indicator during the
 check.  After the spinner exits (line cleared), a status line is
 printed — matching the same pattern used for ``vlm analyze``:
 
-.. code:: python
-
-    with spinner("checking Ollama"):
-        ok = _ensure_ollama(VLM_OLLAMA_URL)
-    if ok:
-        print_ok("ollama reachable")
-    else:
-        print_warn(f"ollama unreachable ({VLM_OLLAMA_URL})")
+```python
+with spinner("checking Ollama"):
+    ok = _ensure_ollama(VLM_OLLAMA_URL)
+if ok:
+    print_ok("ollama reachable")
+else:
+    print_warn(f"ollama unreachable ({VLM_OLLAMA_URL})")
+```
 
 ``_ensure_ollama()`` probes ``GET {VLM_OLLAMA_URL}/api/tags``:
 
@@ -218,8 +261,11 @@ everything on one thread with no synchronization needed.
 
 ## Entry point
 
-`main.py` (11 lines): imports `main_loop` from `core.pipeline` and
-calls it under `if __name__ == "__main__"`.
+`main.py` dispatches on argv:
+
+- no arguments → `main_loop()` (hotkey screenshot loop)
+- `file <img> [<img>...]` → `_run_batch()` (batch conversion, no GUI)
+- anything else → usage message, exit code 1
 
 `Launch Tablesnap Tool.cmd` runs `uv run python main.py` and uses
 `exit /b` (not `pause`) so Ctrl+C exits cleanly without a
@@ -262,15 +308,16 @@ files first.
 
 ```
 tablesnap/
-├── main.py                  # entry point
+├── main.py                  # entry point (loop / file batch dispatch)
 ├── Launch Tablesnap Tool.cmd  # launcher (exit /b)
 ├── pyproject.toml           # project config + dependencies
+├── config.json              # optional runtime overrides (gitignored)
 ├── core/
 │   ├── __init__.py          # docstring only
-│   ├── config.py            # all tunable parameters
+│   ├── config.py            # all tunable parameters + override loading
 │   ├── hotkey.py            # polling-based hotkey wait
 │   ├── output.py            # centralised console output (all print_*)
-│   └── pipeline.py          # main_loop + process_screenshot + _ensure_ollama
+│   └── pipeline.py          # main_loop + process_screenshot + process_image_file + _ensure_ollama
 ├── capture/
 │   ├── __init__.py
 │   ├── screen.py            # mss capture + PNG save to captures/

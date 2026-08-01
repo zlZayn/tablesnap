@@ -17,9 +17,41 @@ uv run python main.py
 
 > 提示：按下 ``Esc`` 可取消本次截图。
 
+## 批处理模式
+
+无需截图界面，直接转换已有图片文件为 XLSX：
+
+```bash
+uv run python main.py file a.png b.jpg
+```
+
+逐张识别并导出到 ``results/``，结束后汇总成功/失败数量。支持的扩展名：PNG、JPG、JPEG、BMP、TIFF、WEBP。
+
+## 配置
+
+所有可调参数集中在 ``core/config.py``。不改代码即可覆盖：
+
+1. **复制模板再改**：把项目根目录的 ``config.example.json``（已提交到 git）复制成 ``config.json``，改里面任何键即可。例如换模型和快捷键，在 ``config.json`` 里写：
+
+   ```json
+   { "VLM_MODEL": "qwen3-vl:2b-instruct", "HOTKEY": "ctrl+alt+x" }
+   ```
+
+2. **环境变量**：``TABLESNAP_<常量名>``（如 ``TABLESNAP_VLM_MODEL``），优先级高于 ``config.json``。
+
+优先级：环境变量 > ``config.json`` > 文件默认值。
+
+随时查看当前生效的配置：
+
+```bash
+uv run python main.py --print-config
+```
+
+会打印每个可覆盖键的当前值和来源（``default`` / ``config.json`` / ``env:TABLESNAP_*``）。``config.json`` 已被 git 忽略——你的本地设置不会被提交。完整键列表见 ``docs/ARCHITECTURE.md``。
+
 ## 前置要求
 
-- Python 3.8+
+- Python 3.10+
 - [Ollama](https://ollama.com/) 已安装并运行
 - VLM 模型已加载：`ollama pull qwen3-vl:4b-instruct`
 

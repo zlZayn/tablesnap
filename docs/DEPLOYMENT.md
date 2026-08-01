@@ -122,11 +122,62 @@
 
 ## 配置速查
 
-| 想改什么 | 改哪个文件 | 具体位置 |
-| :--- | :--- | :--- |
-| 模型 | `core/config.py` | `VLM_MODEL` |
-| Ollama 地址 | `core/config.py` | `VLM_OLLAMA_URL` |
-| 输出目录 | `core/config.py` | `OUTPUT_DIR` |
-| 快捷键 | `core/config.py` | `HOTKEY` |
-| 模型存储位置 | 系统环境变量 | `OLLAMA_MODELS` |
-| 提示词 | `vlm/prompts.py` | `SYSTEM_PROMPT` / `USER_PROMPT` |
+运行期参数不用改代码，按优先级 `环境变量 > config.json > 代码默认值`。
+以下 16 个键均可覆盖（环境变量名 = `TABLESNAP_` + 键名）：
+
+| 键 | 类型 | 默认值 | 作用 |
+| :--- | :--- | :--- | :--- |
+| `HOTKEY` | str | `ctrl+alt+s` | 截图快捷键 |
+| `DEBOUNCE` | float | `0.3` | 触发后的防抖秒数 |
+| `DIM_ALPHA` | float | `0.3` | 选区外变暗程度 |
+| `MIN_SIZE` | int | `10` | 最小选框宽高（px） |
+| `COLOR` | str | `#00BCD4` | 角标强调色 |
+| `BORDER_COLOR` | str | `#666666` | 边框线颜色 |
+| `CORNER_SIZE` | int | `5` | 角标半边长（px） |
+| `LINE_W` | int | `1` | 边框线宽（px） |
+| `LABEL_COLOR` | str | `#CCCCCC` | 尺寸文字颜色 |
+| `LABEL_OFFSET` | int | `18` | 尺寸文字与选框间距（px） |
+| `VLM_MODEL` | str | `qwen3-vl:4b-instruct` | Ollama 模型名 |
+| `VLM_OLLAMA_URL` | str | `http://localhost:11434` | Ollama 服务地址 |
+| `VLM_TIMEOUT` | int | `30` | 单次请求超时（秒） |
+| `VLM_TEMPERATURE` | float | `0.1` | 生成温度 |
+| `VLM_NUM_PREDICT` | int | `2048` | 最大输出 token 数 |
+| `OUTPUT_DIR` | path | `results/` | 输出目录（`captures/` 自动跟随） |
+
+### 覆盖方式
+
+1. **复制模板**：项目根目录的 `config.example.json` 就是完整模板（16 键默认值，已提交到 git）。复制为 `config.json` 后改任意键：
+
+   ```powershell
+   Copy-Item config.example.json config.json
+   ```
+
+   或者直接新建 `config.json`，只写想改的键（未写的键用默认值）：
+
+   ```json
+   { "VLM_MODEL": "qwen3-vl:2b-instruct", "HOTKEY": "ctrl+alt+x" }
+   ```
+
+2. **环境变量**：`TABLESNAP_<键名>`，如 `TABLESNAP_VLM_MODEL`。优先级高于 `config.json`。
+
+### 验证生效配置
+
+改完配置后，用 `--print-config` 查看每个键的当前值和来源（`default` / `config.json` / `env:TABLESNAP_*`）：
+
+```powershell
+uv run python main.py --print-config
+```
+
+- `config.json` 已被 git 忽略，本地设置不会提交。
+- `OUTPUT_DIR` 支持相对路径（基于项目根目录解析，如 `results`）和绝对路径。
+
+### 不参与覆盖
+
+- `LABEL_FONT`（元组类型）与路径常量 `PROJECT_ROOT` / `TEST_*`
+- 提示词：写死在 `vlm/prompts.py` 的 `SYSTEM_PROMPT` / `USER_PROMPT`
+- 模型存储位置：Ollama 自身配置（系统环境变量 `OLLAMA_MODELS`）
+
+### 回退规则
+
+非法值（类型不对、`None`、路径非字符串）会被静默忽略，回退到默认值。
+完整覆盖机制见 `docs/ARCHITECTURE.md` 的 Configuration 章节。

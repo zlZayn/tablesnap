@@ -9,6 +9,9 @@ __pycache__/
 # Virtual environment
 .venv/
 
+# Local config overrides (see core/config.py)
+config.json
+
 # Project output / build
 results/
 build/
