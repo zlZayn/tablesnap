@@ -8,13 +8,8 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.cell.cell import MergedCell
-from openpyxl.styles import PatternFill
 
 from core.config import OUTPUT_DIR
-
-_HIGHLIGHT_FILL = PatternFill(
-    start_color="FFFF00", end_color="FFFF00", fill_type="solid"
-)
 
 
 def display_width(text: str) -> int:
@@ -33,7 +28,6 @@ def display_width(text: str) -> int:
 def export_to_xlsx(
     data: list[list[str]],
     output_dir: str | None = None,
-    highlight_rows: list[int] | None = None,
     timestamp: str | None = None,
 ) -> str:
     """Export a 2-D grid of text data to an XLSX file.
@@ -45,7 +39,6 @@ def export_to_xlsx(
     Args:
         data:           2-D list where ``data[row][col]`` is the cell text.
         output_dir:     Override output directory.
-        highlight_rows: 0-based row indices to highlight with yellow fill.
         timestamp:      Optional pre-generated timestamp string (format
                         ``YYYY-MM-DD_HHMMSS``).  When ``None`` a new one is
                         generated from the current time.
@@ -75,13 +68,9 @@ def export_to_xlsx(
     assert ws is not None
     ws.title = "Results"
 
-    highlight = set(highlight_rows or [])
-
     for row_idx, row in enumerate(data, start=1):
         for col_idx, cell_value in enumerate(row, start=1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=cell_value)
-            if (row_idx - 1) in highlight:
-                cell.fill = _HIGHLIGHT_FILL
+            ws.cell(row=row_idx, column=col_idx, value=cell_value)
 
     # Auto-fit column widths (CJK-aware, skip MergedCell entries)
     for column_cells in ws.columns:

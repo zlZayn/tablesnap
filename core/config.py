@@ -23,7 +23,6 @@ TEST_OUTPUT = PROJECT_ROOT / "tests" / "test_output"
 # ---------------------------------------------------------------------------
 HOTKEY         = "ctrl+alt+s"
 DEBOUNCE       = 0.3    # seconds to ignore after a trigger
-POLL_INTERVAL  = 0.05   # seconds between key-state checks
 
 # ---------------------------------------------------------------------------
 # Region selection overlay

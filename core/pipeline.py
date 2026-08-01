@@ -28,11 +28,6 @@ from export.xlsx import psv_to_xlsx
 from capture.selector import capture_region
 
 
-def _log_stage(label: str, elapsed: float, detail: str = "") -> None:
-    """Timing line (delegates to output module)."""
-    print_timing(label, elapsed, detail)
-
-
 def _xlsx_shape(path: str) -> str:
     """Read xlsx shape quickly — '3r x 5c' or '?'."""
     try:
@@ -43,11 +38,6 @@ def _xlsx_shape(path: str) -> str:
     except Exception:
         pass
     return "?"
-
-
-def _file_href(path_str: str) -> str:
-    """Return path as-is; drive-letter paths are clickable in Warp and most terminals."""
-    return path_str
 
 
 def process_screenshot() -> None:
@@ -61,17 +51,17 @@ def process_screenshot() -> None:
         try:
             image_path = capture_region(timestamp=ts)
         except Exception as exc:
-            _log_stage("capture", time.perf_counter() - t_cap)
+            print_timing("capture", time.perf_counter() - t_cap)
             print_err(f"capture failed: {exc}")
             print_tip("Check display and permissions, then try again")
             return
         t_cap = time.perf_counter() - t_cap
 
         if image_path is None:
-            _log_stage("capture", t_cap, "cancelled")
+            print_timing("capture", t_cap, "cancelled")
             return
 
-        _log_stage("capture", t_cap)
+        print_timing("capture", t_cap)
 
         # -- Step 2: VLM analysis --
         print_stage("vlm")
@@ -85,7 +75,7 @@ def process_screenshot() -> None:
         with spinner("vlm analyzing"):
             psv_text = client.analyze(image_bytes)
         t_vlm = time.perf_counter() - t_vlm
-        _log_stage("vlm analyze", t_vlm)
+        print_timing("vlm analyze", t_vlm)
 
         raw_stripped = psv_text.strip()
 
@@ -97,12 +87,12 @@ def process_screenshot() -> None:
         else:
             xlsx_path = psv_to_xlsx(psv_text, timestamp=ts)
         t_xport = time.perf_counter() - t_xport
-        _log_stage("export", t_xport)
+        print_timing("export", t_xport)
 
         # -- Summary --
         total = t_cap + t_vlm + t_xport
         print_break()
-        _log_stage("total", total)
+        print_timing("total", total)
 
         if xlsx_path:
             shape = _xlsx_shape(xlsx_path)
@@ -110,8 +100,7 @@ def process_screenshot() -> None:
             if "```" in psv_text:
                 extras.append("fenced")
             hint = f"  ({shape})" + (f"  [{', '.join(extras)}]" if extras else "")
-            href = _file_href(xlsx_path)
-            print_ok(f"{href}  {hint}")
+            print_ok(f"{xlsx_path}  {hint}")
         elif raw_stripped == "NO_TABLE":
             print_warn("no table detected in the selected region")
             print_tip("Make sure the area has a table with column headers")

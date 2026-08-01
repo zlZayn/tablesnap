@@ -138,8 +138,9 @@ If `psv_to_xlsx()` receives empty text after cleaning, it raises
 ### Configuration
 
 Everything tunable lives in `core/config.py`: paths, hotkey, overlay
-settings, VLM model + URL + temperature + timeout.  No magic numbers
-in any other module.
+settings, VLM model + URL + temperature + timeout.  One exception:
+the hotkey poll interval (50 ms) is a function default in
+`core/hotkey.py` rather than a config constant.
 
 ### Console output
 
