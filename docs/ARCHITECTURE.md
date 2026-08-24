@@ -1,4 +1,4 @@
-# Architecture
+# tablesnap 架构说明
 
 Screenshots a region, sends it to a local VLM (Ollama +
 qwen3-vl:4b-instruct), saves the extracted table as `.xlsx`.  One
@@ -309,39 +309,54 @@ files first.
 
 ```
 tablesnap/
+├── README.md                # user guide (English)
+├── README_zh.md             # user guide (简体中文)
+├── AGENTS.md                # maintenance dashboard (rules + commands + doc map)
 ├── main.py                  # entry point (loop / file batch dispatch)
 ├── Launch Tablesnap Tool.cmd  # launcher (exit /b)
 ├── pyproject.toml           # project config + dependencies
+├── uv.lock                  # locked dependency tree
+├── .python-version          # 3.12.10
+├── .gitignore
+├── pyrightconfig.json       # type-checker config (venv path)
+├── config.example.json      # committed override template
 ├── config.json              # optional runtime overrides (gitignored)
-├── core/
+├── .agents/notes/           # decision records (linked from AGENTS.md)
+├── docs/
+│   ├── ARCHITECTURE.md      # design bible (this file)
+│   ├── PHILOSOPHY.md        # design rationale (VLM over OCR)
+│   ├── DEPLOYMENT.md        # step-by-step setup guide
+│   └── specs/               # archived design documents
+├── core/                    # AGENTS.md + README.md: rules + module manual
 │   ├── __init__.py          # docstring only
 │   ├── config.py            # all tunable parameters + override loading
 │   ├── hotkey.py            # polling-based hotkey wait
 │   ├── output.py            # centralised console output (all print_*)
 │   └── pipeline.py          # main_loop + process_screenshot + process_image_file + _ensure_ollama
-├── capture/
+├── capture/                 # AGENTS.md + README.md: rules + module manual
 │   ├── __init__.py
 │   ├── screen.py            # mss capture + PNG save to captures/
 │   └── selector.py          # tkinter dimmed overlay + RegionSelector
-├── vlm/
+├── vlm/                     # AGENTS.md + README.md: rules + module manual
 │   ├── __init__.py
 │   ├── client.py            # Ollama HTTP client (stdlib only)
 │   └── prompts.py           # SYSTEM_PROMPT + USER_PROMPT
-├── export/
+├── export/                  # AGENTS.md + README.md: rules + module manual
 │   ├── __init__.py
 │   └── xlsx.py              # psv_to_xlsx + export_to_xlsx
-├── tests/
+├── tests/                   # AGENTS.md + README.md: rules + test manual
 │   ├── __init__.py
 │   ├── test_vlm.py          # mocked VLM client tests
 │   ├── test_xlsx.py         # PSV parsing tests
 │   ├── test_end_to_end.py   # integration test on sample images
 │   ├── read_xlsx.py         # debug tool
-│   └── test_table_pics/     # 5 sample table images (139 KB compressed)
-│       ├── test_data_01.png
-│       ├── test_data_02.png
-│       ├── test_data_03.png
-│       ├── test_data_04.png
-│       └── test_data_05.png
+│   ├── test_table_pics/     # 5 sample table images (233 KB)
+│   │   ├── test_data_01.png
+│   │   ├── test_data_02.png
+│   │   ├── test_data_03.png
+│   │   ├── test_data_04.png
+│   │   └── test_data_05.png
+│   └── test_output/         # E2E output + _report.json (gitignored, auto-cleaned)
 └── results/                 # output XLSX directory
     └── captures/            # screenshot PNGs (timestamped, paired with XLSX)
 ```
