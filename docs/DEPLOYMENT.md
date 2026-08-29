@@ -77,7 +77,7 @@
 
 ## Step 4 — 项目依赖
 
-> `uv sync` `[镜像]` 慢的话加 `-i https://pypi.tuna.tsinghua.edu.cn/simple`
+> `uv sync` `[镜像]` 慢的话加 `-i <PyPI 镜像源>`（任意国内镜像均可）
 
 | 结果 | 处理 |
 | :--- | :--- |
@@ -123,26 +123,26 @@
 ## 配置速查
 
 运行期参数不用改代码，按优先级 `环境变量 > config.json > 代码默认值`。
-以下 16 个键均可覆盖（环境变量名 = `TABLESNAP_` + 键名）：
+以下 16 个键均可覆盖（环境变量名 = `TABLESNAP_` + 键名；键作用与完整覆盖机制见 [ARCHITECTURE.md](ARCHITECTURE.md) 的 Configuration 章节）：
 
-| 键 | 类型 | 默认值 | 作用 |
-| :--- | :--- | :--- | :--- |
-| `HOTKEY` | str | `ctrl+alt+s` | 截图快捷键 |
-| `DEBOUNCE` | float | `0.3` | 触发后的防抖秒数 |
-| `DIM_ALPHA` | float | `0.3` | 选区外变暗程度 |
-| `MIN_SIZE` | int | `10` | 最小选框宽高（px） |
-| `COLOR` | str | `#00BCD4` | 角标强调色 |
-| `BORDER_COLOR` | str | `#666666` | 边框线颜色 |
-| `CORNER_SIZE` | int | `5` | 角标半边长（px） |
-| `LINE_W` | int | `1` | 边框线宽（px） |
-| `LABEL_COLOR` | str | `#CCCCCC` | 尺寸文字颜色 |
-| `LABEL_OFFSET` | int | `18` | 尺寸文字与选框间距（px） |
-| `VLM_MODEL` | str | `qwen3-vl:4b-instruct` | Ollama 模型名 |
-| `VLM_OLLAMA_URL` | str | `http://localhost:11434` | Ollama 服务地址 |
-| `VLM_TIMEOUT` | int | `30` | 单次请求超时（秒） |
-| `VLM_TEMPERATURE` | float | `0.1` | 生成温度 |
-| `VLM_NUM_PREDICT` | int | `2048` | 最大输出 token 数 |
-| `OUTPUT_DIR` | path | `results/` | 输出目录（`captures/` 自动跟随） |
+| 键 | 类型 | 默认值 |
+| :--- | :--- | :--- |
+| `HOTKEY` | str | `ctrl+alt+s` |
+| `DEBOUNCE` | float | `0.3` |
+| `DIM_ALPHA` | float | `0.3` |
+| `MIN_SIZE` | int | `10` |
+| `COLOR` | str | `#00BCD4` |
+| `BORDER_COLOR` | str | `#666666` |
+| `CORNER_SIZE` | int | `5` |
+| `LINE_W` | int | `1` |
+| `LABEL_COLOR` | str | `#CCCCCC` |
+| `LABEL_OFFSET` | int | `18` |
+| `VLM_MODEL` | str | `qwen3-vl:4b-instruct` |
+| `VLM_OLLAMA_URL` | str | `http://localhost:11434` |
+| `VLM_TIMEOUT` | int | `30` |
+| `VLM_TEMPERATURE` | float | `0.1` |
+| `VLM_NUM_PREDICT` | int | `2048` |
+| `OUTPUT_DIR` | path | `results/` |
 
 ### 覆盖方式
 
@@ -179,5 +179,4 @@ uv run python main.py --print-config
 
 ### 回退规则
 
-非法值（类型不对、`None`、路径非字符串）会被静默忽略，回退到默认值。
-完整覆盖机制见 `docs/ARCHITECTURE.md` 的 Configuration 章节。
+非法值回退、白名单、路径跟随等完整覆盖机制见 [ARCHITECTURE.md](ARCHITECTURE.md) 的 Configuration 章节。

@@ -12,7 +12,7 @@
 - 端到端（需 Ollama + qwen3-vl:4b-instruct）：uv run python tests/test_end_to_end.py
 - 生效配置：uv run python main.py --print-config
 - 启动：uv run python main.py，或双击 Launch Tablesnap Tool.cmd
-- 重新锁（清华镜像）：uv lock --default-index https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+- 重新锁（镜像可自由更换，按需指定）：uv lock --default-index <PyPI 镜像源>
 
 ## 验证快照（2026-08-24 实测）
 - pytest：10 passed / 0 failed（单测；test_vlm 6 + test_xlsx 4）

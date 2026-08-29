@@ -1,6 +1,6 @@
 # 决策：uv.lock 包源统一为清华镜像（2026-08-28）
 
-已实施：是
+已实施：是 → **已废弃（2026-08-29）：镜像不再统一，可自由更换；此决策停止指导未来工作**
 
 ## 问题
 uv.lock 全部 181 个包源与制品 URL 指向 pypi.org / files.pythonhosted.org；本机（大陆网络）访问官方源慢且偶发连不上，重锁与安装反复超时。
@@ -8,7 +8,7 @@ uv.lock 全部 181 个包源与制品 URL 指向 pypi.org / files.pythonhosted.o
 ## 决策
 uv.lock 以 `uv lock --default-index https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple` 重新生成（commit cea3f4d）。
 依赖元数据零变化：版本与哈希逐行比对无差异，diff 1435 行为纯 URL 变化。
-后续重新锁文件必须沿用同一 --default-index 参数，否则锁会回退到官方源。
+当时的约定：后续重新锁沿用同一 --default-index（该约定已随废弃取消，镜像可自由更换）。
 
 ## 替代方案（强制）
 - 保持官方源：本机访问 pypi.org 慢/不稳，重试成本高，问题依旧 → 否决

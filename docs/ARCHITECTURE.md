@@ -174,12 +174,29 @@ Precedence: **environment variable > config.json > file default.**
 Because the overrides run at module level, `from core.config import X`
 always binds the effective value.
 
-Whitelisted keys (in `_OVERRIDABLE`, with their types): `HOTKEY`,
-`DEBOUNCE`, `DIM_ALPHA`, `MIN_SIZE`, `COLOR`, `BORDER_COLOR`,
-`CORNER_SIZE`, `LINE_W`, `LABEL_COLOR`, `LABEL_OFFSET`, `VLM_MODEL`,
-`VLM_OLLAMA_URL`, `VLM_TIMEOUT`, `VLM_TEMPERATURE`, `VLM_NUM_PREDICT`,
-`OUTPUT_DIR`.  `LABEL_FONT` (a tuple) and the path constants
-(`PROJECT_ROOT`, `TEST_*`) are intentionally excluded.
+Whitelisted keys (in `_OVERRIDABLE`) — the authoritative list:
+
+| Key | Type | Meaning |
+| :--- | :--- | :--- |
+| `HOTKEY` | str | Screenshot hotkey |
+| `DEBOUNCE` | float | Debounce seconds after trigger |
+| `DIM_ALPHA` | float | Dimming level outside selection |
+| `MIN_SIZE` | int | Min selection width/height (px) |
+| `COLOR` | str | Corner-marker accent colour |
+| `BORDER_COLOR` | str | Border line colour |
+| `CORNER_SIZE` | int | Corner-marker half-size (px) |
+| `LINE_W` | int | Border line width (px) |
+| `LABEL_COLOR` | str | Dimension text colour |
+| `LABEL_OFFSET` | int | Gap between selection edge and label (px) |
+| `VLM_MODEL` | str | Ollama model name |
+| `VLM_OLLAMA_URL` | str | Ollama service URL |
+| `VLM_TIMEOUT` | int | Per-request timeout (s) |
+| `VLM_TEMPERATURE` | float | Generation temperature |
+| `VLM_NUM_PREDICT` | int | Max output tokens |
+| `OUTPUT_DIR` | path | Output directory (`captures/` follows) |
+
+`LABEL_FONT` (a tuple) and the path constants (`PROJECT_ROOT`,
+`TEST_*`) are intentionally excluded.
 
 When `OUTPUT_DIR` is overridden, `CAPTURES_DIR` is recomputed to
 `<output_dir>/captures` automatically.  Invalid values (wrong type,
@@ -307,56 +324,29 @@ files first.
 
 ## Project file map
 
+Navigation index only — file-level responsibility lives in each module
+manual (linked below) and in the sections above, not duplicated here.
+
 ```
 tablesnap/
-├── README.md                # user guide (English)
-├── README_zh.md             # user guide (简体中文)
-├── AGENTS.md                # maintenance dashboard (rules + commands + doc map)
-├── main.py                  # entry point (loop / file batch dispatch)
+├── README.md / README_zh.md   # user guide (EN / 简体中文)
+├── AGENTS.md                  # maintenance dashboard (rules + commands + doc map)
+├── main.py                    # entry point (loop / file batch dispatch)
 ├── Launch Tablesnap Tool.cmd  # launcher (exit /b)
-├── pyproject.toml           # project config + dependencies
-├── uv.lock                  # locked dependency tree
-├── .python-version          # 3.12.10
-├── .gitignore
-├── pyrightconfig.json       # type-checker config (venv path)
-├── config.example.json      # committed override template
-├── config.json              # optional runtime overrides (gitignored)
-├── .agents/notes/           # decision records (linked from AGENTS.md)
+├── pyproject.toml / uv.lock / .python-version / .gitignore
+├── pyrightconfig.json         # type-checker config (venv path)
+├── config.example.json        # committed override template
+├── config.json                # optional runtime overrides (gitignored)
+├── .agents/notes/             # decision records (linked from AGENTS.md)
 ├── docs/
-│   ├── ARCHITECTURE.md      # design bible (this file)
-│   ├── PHILOSOPHY.md        # design rationale (VLM over OCR)
-│   ├── DEPLOYMENT.md        # step-by-step setup guide
-│   └── specs/               # archived design documents
-├── core/                    # AGENTS.md + README.md: rules + module manual
-│   ├── __init__.py          # docstring only
-│   ├── config.py            # all tunable parameters + override loading
-│   ├── hotkey.py            # polling-based hotkey wait
-│   ├── output.py            # centralised console output (all print_*)
-│   └── pipeline.py          # main_loop + process_screenshot + process_image_file + _ensure_ollama
-├── capture/                 # AGENTS.md + README.md: rules + module manual
-│   ├── __init__.py
-│   ├── screen.py            # mss capture + PNG save to captures/
-│   └── selector.py          # tkinter dimmed overlay + RegionSelector
-├── vlm/                     # AGENTS.md + README.md: rules + module manual
-│   ├── __init__.py
-│   ├── client.py            # Ollama HTTP client (stdlib only)
-│   └── prompts.py           # SYSTEM_PROMPT + USER_PROMPT
-├── export/                  # AGENTS.md + README.md: rules + module manual
-│   ├── __init__.py
-│   └── xlsx.py              # psv_to_xlsx + export_to_xlsx
-├── tests/                   # AGENTS.md + README.md: rules + test manual
-│   ├── __init__.py
-│   ├── test_vlm.py          # mocked VLM client tests
-│   ├── test_xlsx.py         # PSV parsing tests
-│   ├── test_end_to_end.py   # integration test on sample images
-│   ├── read_xlsx.py         # debug tool
-│   ├── test_table_pics/     # 5 sample table images (233 KB)
-│   │   ├── test_data_01.png
-│   │   ├── test_data_02.png
-│   │   ├── test_data_03.png
-│   │   ├── test_data_04.png
-│   │   └── test_data_05.png
-│   └── test_output/         # E2E output + _report.json (gitignored, auto-cleaned)
-└── results/                 # output XLSX directory
-    └── captures/            # screenshot PNGs (timestamped, paired with XLSX)
+│   ├── ARCHITECTURE.md        # design bible (this file)
+│   ├── PHILOSOPHY.md          # design rationale (VLM over OCR)
+│   ├── DEPLOYMENT.md          # step-by-step setup guide
+│   └── specs/                 # archived design documents
+├── core/                      # rules + module manual → [core/README.md](../core/README.md)
+├── capture/                   # rules + module manual → [capture/README.md](../capture/README.md)
+├── vlm/                       # rules + module manual → [vlm/README.md](../vlm/README.md)
+├── export/                    # rules + module manual → [export/README.md](../export/README.md)
+├── tests/                     # rules + test manual → [tests/README.md](../tests/README.md)
+└── results/                   # output XLSX directory + captures/
 ```
