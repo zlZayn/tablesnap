@@ -2,6 +2,12 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
+## 预览
+
+![tablesnap CLI](screenshots/cli.png)
+
+tablesnap 实际运行效果：截屏 → 表格识别 → XLSX 导出，全程命令行完成。
+
 截图 → VLM 视觉语言模型直接识别 → 导出 XLSX。
 
 ## 快速开始

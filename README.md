@@ -2,6 +2,12 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
+## Preview
+
+![tablesnap CLI](screenshots/cli.png)
+
+tablesnap in action: screenshot → table recognition → XLSX export, all from the CLI.
+
 Take a screenshot, let a VLM identify it directly, and export to XLSX.
 
 ## Quick start
