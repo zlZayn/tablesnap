@@ -79,9 +79,7 @@ class TestOllamaClient(unittest.TestCase):
     # ------------------------------------------------------------------
     @patch("urllib.request.urlopen")
     def test_analyze_returns_error_prefix_on_connection_error(self, mock_urlopen):
-        mock_urlopen.side_effect = urllib.error.URLError(
-            reason="Connection refused"
-        )
+        mock_urlopen.side_effect = urllib.error.URLError(reason="Connection refused")
 
         result = self.client.analyze(self.sample_png)
 

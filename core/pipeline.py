@@ -116,9 +116,7 @@ def process_screenshot() -> None:
 
         # -- Step 2+3: VLM analysis + export --
         image_bytes = Path(image_path).read_bytes()
-        xlsx_path, raw_stripped, t_vlm, t_xport = _analyze_and_export(
-            image_bytes, ts
-        )
+        xlsx_path, raw_stripped, t_vlm, t_xport = _analyze_and_export(image_bytes, ts)
 
         # -- Summary --
         total = t_cap + t_vlm + t_xport
@@ -181,9 +179,7 @@ def process_image_file(image_path: str, timestamp: str | None = None) -> str | N
 
         print_stage(f"file  {path.name}")
         image_bytes = path.read_bytes()
-        xlsx_path, raw_stripped, t_vlm, t_xport = _analyze_and_export(
-            image_bytes, ts
-        )
+        xlsx_path, raw_stripped, t_vlm, t_xport = _analyze_and_export(image_bytes, ts)
 
         total = t_vlm + t_xport
         print_break()

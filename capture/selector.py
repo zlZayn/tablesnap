@@ -43,11 +43,11 @@ class RegionSelector:
     def __init__(self, background: Image.Image) -> None:
         self._bg = background
         self._result: tuple[int, int, int, int] | None = None
-        self._hl_id: int | None = None        # "highlight" image item
+        self._hl_id: int | None = None  # "highlight" image item
         self._hl_photo: ImageTk.PhotoImage | None = None
-        self._corner_ids: list[int] = []      # corner-marker item ids
-        self._line_ids: list[int] = []        # border line item ids
-        self._text_id: int | None = None      # dimension label item id
+        self._corner_ids: list[int] = []  # corner-marker item ids
+        self._line_ids: list[int] = []  # border line item ids
+        self._text_id: int | None = None  # dimension label item id
         self._sx: int | None = None
         self._sy: int | None = None
 
@@ -64,9 +64,7 @@ class RegionSelector:
         )
         self._photo_dimmed = ImageTk.PhotoImage(dimmed)
 
-        self._canvas = tk.Canvas(
-            self._root, highlightthickness=0, cursor="crosshair"
-        )
+        self._canvas = tk.Canvas(self._root, highlightthickness=0, cursor="crosshair")
         self._canvas.pack(fill=tk.BOTH, expand=True)
         self._canvas.create_image(0, 0, anchor=tk.NW, image=self._photo_dimmed)
 
@@ -127,36 +125,41 @@ class RegionSelector:
         # -- Thin border lines --
         cs = CORNER_SIZE
         self._line_ids = [
-            self._canvas.create_line(left, top, right, top,
-                                     fill=BORDER_COLOR, width=LINE_W),
-            self._canvas.create_line(right, top, right, bottom,
-                                     fill=BORDER_COLOR, width=LINE_W),
-            self._canvas.create_line(right, bottom, left, bottom,
-                                     fill=BORDER_COLOR, width=LINE_W),
-            self._canvas.create_line(left, bottom, left, top,
-                                     fill=BORDER_COLOR, width=LINE_W),
+            self._canvas.create_line(
+                left, top, right, top, fill=BORDER_COLOR, width=LINE_W
+            ),
+            self._canvas.create_line(
+                right, top, right, bottom, fill=BORDER_COLOR, width=LINE_W
+            ),
+            self._canvas.create_line(
+                right, bottom, left, bottom, fill=BORDER_COLOR, width=LINE_W
+            ),
+            self._canvas.create_line(
+                left, bottom, left, top, fill=BORDER_COLOR, width=LINE_W
+            ),
         ]
 
         # -- Corner markers (cyan squares) --
         self._corner_ids = [
             self._canvas.create_rectangle(
-                left - cs, top - cs, left + cs, top + cs,
-                fill=COLOR, outline=""),
+                left - cs, top - cs, left + cs, top + cs, fill=COLOR, outline=""
+            ),
             self._canvas.create_rectangle(
-                right - cs, top - cs, right + cs, top + cs,
-                fill=COLOR, outline=""),
+                right - cs, top - cs, right + cs, top + cs, fill=COLOR, outline=""
+            ),
             self._canvas.create_rectangle(
-                right - cs, bottom - cs, right + cs, bottom + cs,
-                fill=COLOR, outline=""),
+                right - cs, bottom - cs, right + cs, bottom + cs, fill=COLOR, outline=""
+            ),
             self._canvas.create_rectangle(
-                left - cs, bottom - cs, left + cs, bottom + cs,
-                fill=COLOR, outline=""),
+                left - cs, bottom - cs, left + cs, bottom + cs, fill=COLOR, outline=""
+            ),
         ]
 
         # -- Dimension label --
         self._text_id = self._canvas.create_text(
-            right, bottom + LABEL_OFFSET,
-            text=f"{right-left} x {bottom-top}",
+            right,
+            bottom + LABEL_OFFSET,
+            text=f"{right - left} x {bottom - top}",
             fill=LABEL_COLOR,
             font=LABEL_FONT,
             anchor="n",
@@ -170,7 +173,10 @@ class RegionSelector:
         if self._hl_id is not None:
             self._canvas.delete(self._hl_id)
         self._hl_id = self._canvas.create_image(
-            left, top, anchor=tk.NW, image=self._hl_photo,
+            left,
+            top,
+            anchor=tk.NW,
+            image=self._hl_photo,
         )
 
     def _on_release(self, event: tk.Event) -> None:

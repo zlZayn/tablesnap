@@ -77,7 +77,7 @@ def main() -> None:
             try:
                 max_rows = int(sys.argv[i + 1])
             except ValueError:
-                print(f"Invalid row count: {sys.argv[i+1]}")
+                print(f"Invalid row count: {sys.argv[i + 1]}")
                 sys.exit(1)
             skip = True
         elif not a.startswith("-"):

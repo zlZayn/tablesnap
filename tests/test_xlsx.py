@@ -25,14 +25,7 @@ class TestPsvToXlsx(unittest.TestCase):
     # Test 2: PSV inside ```psv fence
     # ------------------------------------------------------------------
     def test_psv_fence_extraction(self):
-        psv = (
-            "Some text before\n"
-            "```psv\n"
-            "Name|Age\n"
-            "Alice|30\n"
-            "```\n"
-            "Some text after"
-        )
+        psv = "Some text before\n```psv\nName|Age\nAlice|30\n```\nSome text after"
         with tempfile.TemporaryDirectory() as tmpdir:
             path = psv_to_xlsx(psv, output_dir=tmpdir)
             self.assertTrue(Path(path).exists())

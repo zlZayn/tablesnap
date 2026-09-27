@@ -39,6 +39,7 @@ from core.config import TEST_IMAGES, TEST_OUTPUT
 #  Display helpers
 # ===================================================================
 
+
 def _display_report(entries: list[dict]) -> None:
     """Pretty-print a saved test report (from _report.json)."""
     for entry in entries:
@@ -50,8 +51,10 @@ def _display_report(entries: list[dict]) -> None:
         xlsx_content = entry.get("xlsx_content")
 
         if status == "ok":
-            print(f"  VLM: {vlm_time}s  | XLSX: {shape}"
-                  f"  | PSV len: {entry.get('psv_len', '?')}")
+            print(
+                f"  VLM: {vlm_time}s  | XLSX: {shape}"
+                f"  | PSV len: {entry.get('psv_len', '?')}"
+            )
 
             # Print VLM raw output
             if psv_raw:
@@ -82,12 +85,14 @@ def _print_header() -> None:
 
 
 def _print_row(r: dict, rows_str: str) -> None:
-    vlm_ms = f"{r['vlm_time_s']*1000:.0f}" if r["vlm_time_s"] else "-"
+    vlm_ms = f"{r['vlm_time_s'] * 1000:.0f}" if r["vlm_time_s"] else "-"
     name = r["image"]
     # Truncate long names for table alignment
     if len(name) > 38:
         name = name[:35] + "..."
-    print(f"{name:40s} {r['size_bytes']:>8d} {vlm_ms:>8s} {rows_str:>6s} {r['status']:12s}")
+    print(
+        f"{name:40s} {r['size_bytes']:>8d} {vlm_ms:>8s} {rows_str:>6s} {r['status']:12s}"
+    )
     if r["status"] in ("error", "parse_error", "export_error"):
         print(f"  {'':40s} error: {r['error']}")
 
@@ -95,6 +100,7 @@ def _print_row(r: dict, rows_str: str) -> None:
 # ===================================================================
 #  Core test logic
 # ===================================================================
+
 
 def run_one(image_path: Path) -> dict:
     """Run the full VLM->PSV->XLSX pipeline on a single image.
@@ -244,6 +250,7 @@ def show_last() -> None:
 #  CLI
 # ===================================================================
 
+
 def main():
     args = [a.lower() for a in sys.argv[1:]]
 
@@ -275,6 +282,7 @@ def main():
             xp = r["xlsx_path"]
             print(f"  --- XLSX ({xp}) ---")
             from openpyxl import load_workbook
+
             wb = load_workbook(xp)
             ws = wb.active
             if ws is not None:

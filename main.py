@@ -67,8 +67,7 @@ def _run_batch(image_paths: list[str]) -> int:
 
     print_rule()
     console.print(
-        f"{ok_count} converted, {fail_count} failed "
-        f"({len(image_paths)} total)"
+        f"{ok_count} converted, {fail_count} failed ({len(image_paths)} total)"
     )
     return 1 if fail_count else 0
 
@@ -82,9 +81,7 @@ def main() -> int:
 
     if not args:
         if not (PROJECT_ROOT / "config.json").exists():
-            print_tip(
-                "no config.json — copy config.example.json to customize settings"
-            )
+            print_tip("no config.json — copy config.example.json to customize settings")
         main_loop()
         return 0
 
