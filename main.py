@@ -25,7 +25,6 @@ from core.output import (
 )
 from core.pipeline import _ensure_ollama, main_loop, process_image_file
 
-
 _USAGE = (
     "Usage:\n"
     "  uv run python main.py                       hotkey screenshot loop\n"
