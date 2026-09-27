@@ -59,7 +59,7 @@ def export_to_xlsx(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    ts = timestamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    ts = timestamp or datetime.now().astimezone().strftime("%Y-%m-%d_%H%M%S")
     filename = f"{ts}.xlsx"
     filepath = output_path / filename
 

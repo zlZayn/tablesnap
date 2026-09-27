@@ -13,9 +13,12 @@
 - 生效配置：uv run python main.py --print-config
 - 启动：uv run python main.py，或双击 Launch Tablesnap Tool.cmd
 - 重新锁（镜像可自由更换，按需指定）：uv lock --default-index <PyPI 镜像源>
+- Lint：`uv run ruff check .`（ruff 默认规则集，列宽默认 88）
+- 格式化：`uv run ruff format .`（`--check` 只看不改）
 
-## 验证快照（2026-08-24 实测）
+## 验证快照（2026-09-27 实测）
 - pytest：10 passed / 0 failed（单测；test_vlm 6 + test_xlsx 4）
+- Ruff：`check` 0 发现；`format --check` 全绿（全量格式化已落地）
 - 端到端：未验证（需本地 Ollama + 模型）
 
 ## 待办

@@ -19,7 +19,7 @@ def xlsx_shape(xlsx_path: str) -> str:
         if ws is not None:
             return f"{ws.max_row}x{ws.max_column}"
         return "?"
-    except Exception:
+    except Exception:  # noqa: BLE001 — 形状探针：openpyxl 内部异常面不可枚举，读不出就回 "?"
         return "?"
 
 
@@ -65,8 +65,6 @@ def dump_xlsx(xlsx_path: str, max_rows: int | None = None) -> None:
 
 
 def main() -> None:
-    args = [a.lower() for a in sys.argv[1:]]
-
     # Extract positional paths (everything before --rows / -n)
     paths: list[str] = []
     max_rows: int | None = None

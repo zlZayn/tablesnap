@@ -28,3 +28,6 @@ stdout.txt
 
 # Test output (regenerated each run)
 tests/test_output/
+
+# Lint / 格式化缓存
+.ruff_cache/

@@ -1,5 +1,6 @@
 """Workflow orchestration — ties capture, VLM analysis, and export together."""
 
+import contextlib
 import subprocess
 import time
 import urllib.request
@@ -8,7 +9,15 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from core.config import DEBOUNCE, HOTKEY, OUTPUT_DIR, VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
+from capture.selector import capture_region
+from core.config import (
+    DEBOUNCE,
+    HOTKEY,
+    OUTPUT_DIR,
+    VLM_MODEL,
+    VLM_OLLAMA_URL,
+    VLM_TIMEOUT,
+)
 from core.hotkey import wait_for_hotkey
 from core.output import (
     console,
@@ -23,20 +32,17 @@ from core.output import (
     print_warn,
     spinner,
 )
-from vlm.client import OllamaClient
 from export.xlsx import psv_to_xlsx
-from capture.selector import capture_region
+from vlm.client import OllamaClient
 
 
 def _xlsx_shape(path: str) -> str:
     """Read xlsx shape quickly — '3r x 5c' or '?'."""
-    try:
+    with contextlib.suppress(Exception):
         wb = load_workbook(path)
         ws = wb.active
         if ws is not None:
             return f"{ws.max_row}r x {ws.max_column}c"
-    except Exception:
-        pass
     return "?"
 
 
@@ -92,10 +98,10 @@ def process_screenshot() -> None:
         print_stage("capture")
         t_cap = time.perf_counter()
         # Generate timestamp once — shared by screenshot and XLSX
-        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        ts = datetime.now().astimezone().strftime("%Y-%m-%d_%H%M%S")
         try:
             image_path = capture_region(timestamp=ts)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 截屏失败面跨 mss / PIL / 窗口 API，一律转成用户可见提示
             print_timing("capture", time.perf_counter() - t_cap)
             print_err(f"capture failed: {exc}")
             print_tip("Check display and permissions, then try again")
@@ -134,7 +140,7 @@ def process_screenshot() -> None:
     except ValueError:
         print_warn("VLM returned unparseable output")
         print_tip("Try again, or check Ollama model status")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — 兜底分支：VLM / 解析 / 落盘任一环节意外失败都要变成可读提示
         print_err(f"unexpected error: {exc}")
         print_tip("If this persists, check the logs")
 
@@ -171,7 +177,7 @@ def process_image_file(image_path: str, timestamp: str | None = None) -> str | N
             print_tip(f"Supported: {', '.join(sorted(_IMAGE_EXTS))}")
             return None
 
-        ts = timestamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        ts = timestamp or datetime.now().astimezone().strftime("%Y-%m-%d_%H%M%S")
 
         print_stage(f"file  {path.name}")
         image_bytes = path.read_bytes()
@@ -201,7 +207,7 @@ def process_image_file(image_path: str, timestamp: str | None = None) -> str | N
         print_warn("VLM returned unparseable output")
         print_tip("Try again, or check Ollama model status")
         return None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — 兜底分支：VLM / 解析 / 落盘任一环节意外失败都要变成可读提示
         print_err(f"unexpected error: {exc}")
         print_tip("If this persists, check the logs")
         return None
@@ -213,12 +219,10 @@ def _ensure_ollama(url: str, wait: int = 4) -> bool:
     Returns True if API is reachable within *wait* seconds.
     """
     # Already reachable?
-    try:
+    with contextlib.suppress(OSError, ValueError):
         req = urllib.request.Request(f"{url}/api/tags")
         urllib.request.urlopen(req, timeout=2)
         return True
-    except Exception:
-        pass
 
     # Try to start Ollama server in background (no console window)
     try:
@@ -229,7 +233,7 @@ def _ensure_ollama(url: str, wait: int = 4) -> bool:
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
         )
-    except Exception:
+    except OSError:
         return False
 
     for _ in range(wait * 2):
@@ -238,7 +242,7 @@ def _ensure_ollama(url: str, wait: int = 4) -> bool:
             req = urllib.request.Request(f"{url}/api/tags")
             urllib.request.urlopen(req, timeout=1)
             return True
-        except Exception:
+        except (OSError, ValueError):
             continue
     return False
 

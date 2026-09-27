@@ -9,9 +9,10 @@ Usage:
     uv run python tests/test_end_to_end.py --show      # show last results from _report.json (no VLM)
 """
 
+import contextlib
+import json
 import sys
 import time
-import json
 from pathlib import Path
 
 # Ensure project root AND tests dir are on sys.path before any local imports
@@ -20,13 +21,12 @@ _tests_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(_proj_root))
 sys.path.insert(0, str(_tests_dir))
 
-from tests.read_xlsx import xlsx_shape, print_xlsx_rows
+from tests.read_xlsx import xlsx_shape
 
 # Force UTF-8 for terminal display (Chinese filenames / content)
-try:
-    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-except Exception:
-    pass
+if hasattr(sys.stdout, "reconfigure"):
+    with contextlib.suppress(OSError, ValueError):
+        sys.stdout.reconfigure(encoding="utf-8")
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -34,7 +34,6 @@ except Exception:
 PROJECT_ROOT = _proj_root
 
 from core.config import TEST_IMAGES, TEST_OUTPUT
-
 
 # ===================================================================
 #  Display helpers
@@ -112,9 +111,9 @@ def run_one(image_path: Path) -> dict:
         "error": None,
     }
 
-    from vlm.client import OllamaClient
+    from core.config import VLM_MODEL, VLM_OLLAMA_URL, VLM_TIMEOUT
     from export.xlsx import psv_to_xlsx
-    from core.config import VLM_OLLAMA_URL, VLM_MODEL, VLM_TIMEOUT
+    from vlm.client import OllamaClient
 
     client = OllamaClient(
         base_url=VLM_OLLAMA_URL,
@@ -147,7 +146,7 @@ def run_one(image_path: Path) -> dict:
     except ValueError as e:
         result["status"] = "parse_error"
         result["error"] = str(e)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — e2e 逐图跑批：任一图失败只记进结果，不中断整批
         result["status"] = "export_error"
         result["error"] = f"{type(e).__name__}: {e}"
 
@@ -211,8 +210,9 @@ def run_all() -> list[dict]:
             entry["psv_raw"] = r["psv_raw"]
         # Snapshot XLSX content so --show works without re-loading file
         if r["xlsx_path"] and r["status"] == "ok":
-            try:
-                from openpyxl import load_workbook
+            from openpyxl import load_workbook
+
+            with contextlib.suppress(Exception):  # 报告附加信息：读不出来就跳过该段
                 wb = load_workbook(r["xlsx_path"])
                 ws = wb.active
                 if ws is not None:
@@ -221,8 +221,6 @@ def run_all() -> list[dict]:
                         for row in ws.iter_rows(values_only=True)
                     ]
                     entry["xlsx_shape"] = f"{ws.max_row}r x {ws.max_column}c"
-            except Exception:
-                pass
         report_data.append(entry)
     report_path.write_text(
         json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8"

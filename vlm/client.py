@@ -13,8 +13,8 @@ import urllib.error
 import urllib.request
 from typing import Final
 
-from vlm.prompts import SYSTEM_PROMPT, USER_PROMPT
 from core.config import VLM_NUM_PREDICT, VLM_TEMPERATURE
+from vlm.prompts import SYSTEM_PROMPT, USER_PROMPT
 
 
 class OllamaClient:
@@ -79,20 +79,20 @@ class OllamaClient:
                 f"ERROR: Ollama returned HTTP {e.code} ({e.reason})\n"
                 f"       → Check Ollama:  ollama serve"
             )
-        except urllib.error.URLError as e:
+        except urllib.error.URLError:
             return (
                 f"ERROR: Cannot connect to Ollama at {self.base_url}\n"
                 f"       → Start Ollama:  ollama serve"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 兜底分支：要把异常类型名一并回给用户，收窄会漏掉非 urllib 的异常
             return f"ERROR: {type(e).__name__}: {e}\n       → Try again, or check Ollama logs"
 
         # ---------- parse response ----------
         try:
             result = json.loads(response_bytes)
             return result.get("response", "")
-        except (json.JSONDecodeError, KeyError) as e:
-            return f"ERROR: Ollama returned unexpected response\n       → Try again, or check Ollama logs"
+        except (json.JSONDecodeError, KeyError):
+            return "ERROR: Ollama returned unexpected response\n       → Try again, or check Ollama logs"
 
     def __repr__(self) -> str:
         return f"OllamaClient(model={self.model})"

@@ -7,7 +7,6 @@ Provides::
 """
 
 from datetime import datetime
-from pathlib import Path
 
 from mss import mss
 from PIL import Image
@@ -40,7 +39,7 @@ def save_temp(image: Image.Image, timestamp: str | None = None) -> str:
         Absolute path of the saved file.
     """
     CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
-    ts = timestamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    ts = timestamp or datetime.now().astimezone().strftime("%Y-%m-%d_%H%M%S")
     path = CAPTURES_DIR / f"{ts}.png"
     image.save(path)
     return str(path)
