@@ -1,7 +1,7 @@
 # tablesnap — 维护索引
 
 ## 全局规则（3-5 条，本项目特有）
-- 只改文档与结构，不动功能逻辑；分层约定：AGENTS.md 只写规则，README.md 只写是什么/怎么改（双语文档见 [README_zh.md](README_zh.md)）
+- 只改文档与结构，不动功能逻辑；双件分离：AGENTS.md 只写规则，README.md 只写是什么/怎么改（双语文档见 [README_zh.md](README_zh.md)）
 - 新可调常量必须登记进 core/config.py 的 _OVERRIDABLE 白名单，否则无法外部覆盖（见 [core/README.md](core/README.md)）
 - 用户可见输出一律走 core/output.py，不得在别处直接 import rich（见 [core/README.md](core/README.md)）
 - 结构性取舍必须写决策记录，含 Alternatives considered（见 [.agents/notes/](.agents/notes/)）
