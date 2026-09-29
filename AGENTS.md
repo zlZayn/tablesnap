@@ -9,7 +9,7 @@
 
 ## 常用命令（可执行规范）
 
-- 本地钩子：`pre-commit install`（每个 clone 一次；本体 `uv tool install pre-commit`）——提交前自动 `ruff check --fix` + `ruff format`；CI（windows-latest）只读跑同一组检查
+- 本地钩子：`pre-commit install`（每个 clone 一次；本体 `uv tool install pre-commit`）——提交前自动 `ruff check --fix` + `ruff format`；CI（windows-latest）只读跑同一组检查；全量跑 `pre-commit run --all-files`；临时跳过 `git commit --no-verify`；定义见 [.pre-commit-config.yaml](.pre-commit-config.yaml)
 - 单测（无需 Ollama）：uv run python -m pytest -q
 - 端到端（需 Ollama + qwen3-vl:4b-instruct）：uv run python tests/test_end_to_end.py
 - 生效配置：uv run python main.py --print-config
