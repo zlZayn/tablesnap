@@ -1,5 +1,7 @@
 # tablesnap
 
+[![CI](https://github.com/zlZayn/tablesnap/actions/workflows/ci.yml/badge.svg)](https://github.com/zlZayn/tablesnap/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 [English](README.md) | [简体中文](README_zh.md)
 
 ## 预览
@@ -108,3 +110,15 @@ uv run python tests/read_xlsx.py path/to/file.xlsx
 - `docs/PHILOSOPHY.md` — 设计哲学：为什么选择 VLM 直出而非 OCR 流水线
 - `docs/DEPLOYMENT.md` — Ollama 部署、模型管理、配置路径参考（面向 AI Agent）
 - `core/config.py` — 所有可调参数的统一配置入口
+
+---
+
+## 许可
+
+- 本仓基于 [MIT 许可](LICENSE) 发布。
+
+## 贡献
+
+- 本仓为个人项目；问题与建议请走 [Issues](https://github.com/zlZayn/tablesnap/issues)。
+
+维护者文档地图 → 见 [AGENTS.md](AGENTS.md)。

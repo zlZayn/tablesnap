@@ -1,5 +1,7 @@
 # tablesnap
 
+[![CI](https://github.com/zlZayn/tablesnap/actions/workflows/ci.yml/badge.svg)](https://github.com/zlZayn/tablesnap/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 [English](README.md) | [简体中文](README_zh.md)
 
 ## Preview
@@ -108,3 +110,15 @@ uv run python tests/read_xlsx.py path/to/file.xlsx
 - `docs/PHILOSOPHY.md` — design rationale: why VLM over OCR pipeline
 - `docs/DEPLOYMENT.md` — step-by-step setup guide with Ollama, model pull, and troubleshooting (for AI agents)
 - `core/config.py` — all configurable parameters in one place
+
+---
+
+## License
+
+- Released under the [MIT License](LICENSE).
+
+## Contributing
+
+- Personal project; questions and suggestions welcome via [Issues](https://github.com/zlZayn/tablesnap/issues).
+
+Maintainer docs map → [AGENTS.md](AGENTS.md).
